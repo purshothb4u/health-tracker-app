@@ -3,6 +3,7 @@ package com.healthaitracker.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.healthaitracker.entity.Gender;
 import com.healthaitracker.entity.UserProfile;
+import com.healthaitracker.repository.FoodEntryRepository;
 import com.healthaitracker.repository.HealthMetricRepository;
 import com.healthaitracker.repository.UserProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +34,9 @@ class HealthMetricControllerIntegrationTest {
     private ObjectMapper objectMapper;
 
     @Autowired
+    private FoodEntryRepository foodEntryRepository;
+
+    @Autowired
     private HealthMetricRepository healthMetricRepository;
 
     @Autowired
@@ -42,6 +46,7 @@ class HealthMetricControllerIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        foodEntryRepository.deleteAll();
         healthMetricRepository.deleteAll();
         userProfileRepository.deleteAll();
 

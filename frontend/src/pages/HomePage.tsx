@@ -1,4 +1,5 @@
 import HealthMetricsPanel from '../components/HealthMetricsPanel'
+import FoodTrackingPanel from '../components/FoodTrackingPanel'
 import UserProfileCard from '../components/UserProfileCard'
 import { useUserProfiles } from '../hooks/useUserProfiles'
 
@@ -46,6 +47,7 @@ export default function HomePage() {
             <div key={profile.id} className="space-y-4">
               <UserProfileCard profile={profile} />
               <HealthMetricsPanel profile={profile} onMetricSaved={reload} />
+              <FoodTrackingPanel profile={profile} />
             </div>
           ))}
         </div>

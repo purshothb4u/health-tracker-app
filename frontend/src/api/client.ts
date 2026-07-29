@@ -68,6 +68,12 @@ export function put<T>(path: string, body: unknown): Promise<T> {
   })
 }
 
+export function del<T>(path: string): Promise<T> {
+  return request<T>(path, {
+    method: 'DELETE',
+  })
+}
+
 export function getBackendStatus(): Promise<StatusResponse> {
   return get<StatusResponse>('/api/status')
 }
