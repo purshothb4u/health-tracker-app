@@ -12,6 +12,12 @@ public interface FoodEntryRepository extends JpaRepository<FoodEntry, Long> {
 
     boolean existsByNotesStartingWith(String notesPrefix);
 
+    List<FoodEntry> findByUserProfileIdAndEntryDateBetweenOrderByEntryDateAscCreatedAtAscIdAsc(
+            Long userProfileId,
+            LocalDate fromDate,
+            LocalDate toDate
+    );
+
     @Query("""
             SELECT foodEntry
             FROM FoodEntry foodEntry

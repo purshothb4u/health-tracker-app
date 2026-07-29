@@ -20,7 +20,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </span>
         </div>
       </header>
-      <main className="mx-auto max-w-lg px-4 py-6">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
     </div>
   )
 }

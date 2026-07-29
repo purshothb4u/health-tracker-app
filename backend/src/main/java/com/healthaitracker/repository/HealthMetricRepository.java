@@ -15,5 +15,11 @@ public interface HealthMetricRepository extends JpaRepository<HealthMetric, Long
 
     List<HealthMetric> findByUserProfileIdOrderByMetricDateDesc(Long userProfileId);
 
+    List<HealthMetric> findByUserProfileIdAndMetricDateBetweenOrderByMetricDateAsc(
+            Long userProfileId,
+            LocalDate fromDate,
+            LocalDate toDate
+    );
+
     Optional<HealthMetric> findFirstByUserProfileIdOrderByMetricDateDesc(Long userProfileId);
 }

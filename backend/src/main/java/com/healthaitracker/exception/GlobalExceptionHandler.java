@@ -1,6 +1,8 @@
 package com.healthaitracker.exception;
 
 import com.healthaitracker.dto.ErrorResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,8 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of(ex.getMessage()));
@@ -28,6 +32,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HealthMetricAlreadyExistsException.class)
     public ResponseEntity<ErrorResponse> handleHealthMetricAlreadyExists(HealthMetricAlreadyExistsException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(AnalyticsDateRangeException.class)
+    public ResponseEntity<ErrorResponse> handleAnalyticsDateRange(AnalyticsDateRangeException ex) {
+        return ResponseEntity.badRequest().body(ErrorResponse.of(ex.getMessage()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -69,6 +78,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+        log.error("Unexpected backend exception: {}", ex.getMessage(), ex);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ErrorResponse.of("An unexpected error occurred"));
