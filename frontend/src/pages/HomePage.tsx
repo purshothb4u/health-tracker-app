@@ -1,5 +1,6 @@
 import HealthMetricsPanel from '../components/HealthMetricsPanel'
 import FoodTrackingPanel from '../components/FoodTrackingPanel'
+import WaterTrackingPanel from '../components/WaterTrackingPanel'
 import AnalyticsPanel from '../components/AnalyticsPanel'
 import UserProfileCard from '../components/UserProfileCard'
 import { useUserProfiles } from '../hooks/useUserProfiles'
@@ -43,13 +44,14 @@ export default function HomePage() {
       )}
 
       {!loading && !error && profiles.length > 0 && (
-        <div className="grid gap-4">
+        <div className="grid min-w-0 gap-4">
           {profiles.map((profile) => (
-            <div key={profile.id} className="space-y-4">
-              <div className="max-w-lg space-y-4">
+            <div key={profile.id} className="min-w-0 space-y-4">
+              <div className="w-full min-w-0 max-w-lg space-y-4">
                 <UserProfileCard profile={profile} />
                 <HealthMetricsPanel profile={profile} onMetricSaved={reload} />
                 <FoodTrackingPanel profile={profile} />
+                <WaterTrackingPanel profileName={profile.name} userProfileId={profile.id} />
               </div>
               <AnalyticsPanel profileName={profile.name} userProfileId={profile.id} />
             </div>

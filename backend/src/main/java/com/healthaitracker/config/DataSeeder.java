@@ -5,15 +5,20 @@ import com.healthaitracker.entity.FoodEntry;
 import com.healthaitracker.entity.HealthMetric;
 import com.healthaitracker.entity.MealType;
 import com.healthaitracker.entity.UserProfile;
+import com.healthaitracker.entity.WaterEntry;
+import com.healthaitracker.entity.WaterGoal;
 import com.healthaitracker.repository.FoodEntryRepository;
 import com.healthaitracker.repository.HealthMetricRepository;
 import com.healthaitracker.repository.UserProfileRepository;
+import com.healthaitracker.repository.WaterEntryRepository;
+import com.healthaitracker.repository.WaterGoalRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -24,45 +29,62 @@ public class DataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
     private static final String FOOD_SEED_NOTE_PREFIX = "Development seed data: ";
+    private static final String WATER_SEED_NOTE_PREFIX = "Development water seed data: ";
 
     @Bean
     CommandLineRunner seedUserProfiles(
             UserProfileRepository userProfileRepository,
             HealthMetricRepository healthMetricRepository,
             FoodEntryRepository foodEntryRepository,
+            WaterGoalRepository waterGoalRepository,
+            WaterEntryRepository waterEntryRepository,
+            TransactionTemplate transactionTemplate,
             @Value("${app.seed-data.enabled:true}") boolean seedEnabled) {
         return args -> {
             if (!seedEnabled) {
                 return;
             }
 
-            List<UserProfile> profiles = userProfileRepository.count() == 0
-                    ? seedUserProfiles(userProfileRepository)
-                    : userProfileRepository.findAll();
+            transactionTemplate.executeWithoutResult(status -> seedDevelopmentData(
+                    userProfileRepository,
+                    healthMetricRepository,
+                    foodEntryRepository,
+                    waterGoalRepository,
+                    waterEntryRepository));
+        };
+    }
 
-            profiles.stream()
-                    .filter(profile -> "Husband".equals(profile.getName()))
-                    .findFirst()
-                    .ifPresent(profile -> seedHistoricalMetrics(
-                            profile,
-                            List.of(new BigDecimal("87.00"), new BigDecimal("86.00"), new BigDecimal("85.00")),
-                            healthMetricRepository,
-                            userProfileRepository));
+    private void seedDevelopmentData(
+            UserProfileRepository userProfileRepository,
+            HealthMetricRepository healthMetricRepository,
+            FoodEntryRepository foodEntryRepository,
+            WaterGoalRepository waterGoalRepository,
+            WaterEntryRepository waterEntryRepository) {
+        List<UserProfile> profiles = userProfileRepository.count() == 0
+                ? seedUserProfiles(userProfileRepository)
+                : userProfileRepository.findAll();
 
-            profiles.stream()
-                    .filter(profile -> "Wife".equals(profile.getName()))
-                    .findFirst()
-                    .ifPresent(profile -> seedHistoricalMetrics(
-                            profile,
-                            List.of(new BigDecimal("71.00"), new BigDecimal("70.50"), new BigDecimal("70.00")),
-                            healthMetricRepository,
-                            userProfileRepository));
+        profiles.stream()
+                .filter(profile -> "Husband".equals(profile.getName()))
+                .findFirst()
+                .ifPresent(profile -> seedHistoricalMetrics(
+                        profile,
+                        List.of(new BigDecimal("87.00"), new BigDecimal("86.00"), new BigDecimal("85.00")),
+                        healthMetricRepository,
+                        userProfileRepository));
 
-            if (foodEntryRepository.existsByNotesStartingWith(FOOD_SEED_NOTE_PREFIX)) {
-                log.info("Development food seed data already exists; preserving the original seeded dates.");
-                return;
-            }
+        profiles.stream()
+                .filter(profile -> "Wife".equals(profile.getName()))
+                .findFirst()
+                .ifPresent(profile -> seedHistoricalMetrics(
+                        profile,
+                        List.of(new BigDecimal("71.00"), new BigDecimal("70.50"), new BigDecimal("70.00")),
+                        healthMetricRepository,
+                        userProfileRepository));
 
+        if (foodEntryRepository.existsByNotesStartingWith(FOOD_SEED_NOTE_PREFIX)) {
+            log.info("Development food seed data already exists; preserving the original seeded dates.");
+        } else {
             profiles.stream()
                     .filter(profile -> "Husband".equals(profile.getName()))
                     .findFirst()
@@ -72,7 +94,10 @@ public class DataSeeder {
                     .filter(profile -> "Wife".equals(profile.getName()))
                     .findFirst()
                     .ifPresent(profile -> seedFoodEntries(profile, wifeFoodSeedEntries(), foodEntryRepository));
-        };
+        }
+
+        seedWaterGoals(profiles, waterGoalRepository);
+        seedWaterEntries(profiles, waterEntryRepository);
     }
 
     private List<UserProfile> seedUserProfiles(UserProfileRepository userProfileRepository) {
@@ -147,6 +172,95 @@ public class DataSeeder {
         }
     }
 
+    private void seedWaterGoals(List<UserProfile> profiles, WaterGoalRepository waterGoalRepository) {
+        profiles.stream()
+                .filter(profile -> "Husband".equals(profile.getName()))
+                .findFirst()
+                .ifPresent(profile -> seedWaterGoalIfAbsent(profile, 2500, waterGoalRepository));
+
+        profiles.stream()
+                .filter(profile -> "Wife".equals(profile.getName()))
+                .findFirst()
+                .ifPresent(profile -> seedWaterGoalIfAbsent(profile, 2000, waterGoalRepository));
+    }
+
+    private void seedWaterGoalIfAbsent(
+            UserProfile profile,
+            int dailyGoalMl,
+            WaterGoalRepository waterGoalRepository) {
+        if (waterGoalRepository.existsByUserProfileId(profile.getId())) {
+            return;
+        }
+
+        WaterGoal waterGoal = new WaterGoal();
+        waterGoal.setUserProfile(profile);
+        waterGoal.setDailyGoalMl(dailyGoalMl);
+        waterGoalRepository.save(waterGoal);
+    }
+
+    private void seedWaterEntries(List<UserProfile> profiles, WaterEntryRepository waterEntryRepository) {
+        if (waterEntryRepository.existsByNotesStartingWith(WATER_SEED_NOTE_PREFIX)) {
+            log.info("Development water seed data already exists; preserving the original seeded dates.");
+            return;
+        }
+
+        profiles.stream()
+                .filter(profile -> "Husband".equals(profile.getName()))
+                .findFirst()
+                .ifPresent(profile -> seedWaterEntries(profile, husbandWaterSeedEntries(), waterEntryRepository));
+
+        profiles.stream()
+                .filter(profile -> "Wife".equals(profile.getName()))
+                .findFirst()
+                .ifPresent(profile -> seedWaterEntries(profile, wifeWaterSeedEntries(), waterEntryRepository));
+    }
+
+    private void seedWaterEntries(
+            UserProfile profile,
+            List<WaterSeedEntry> seedEntries,
+            WaterEntryRepository waterEntryRepository) {
+        for (WaterSeedEntry seedEntry : seedEntries) {
+            WaterEntry waterEntry = new WaterEntry();
+            waterEntry.setUserProfile(profile);
+            waterEntry.setEntryDate(LocalDate.now().minusDays(seedEntry.daysAgo()));
+            waterEntry.setAmountMl(seedEntry.amountMl());
+            waterEntry.setNotes(WATER_SEED_NOTE_PREFIX + profile.getName() + " / " + seedEntry.seedKey());
+            waterEntryRepository.save(waterEntry);
+        }
+    }
+
+    private List<WaterSeedEntry> husbandWaterSeedEntries() {
+        return List.of(
+                waterSeedEntry(2, 750, "below-goal-morning"),
+                waterSeedEntry(2, 500, "below-goal-afternoon"),
+                waterSeedEntry(2, 750, "below-goal-evening"),
+                waterSeedEntry(1, 1000, "goal-reached-morning"),
+                waterSeedEntry(1, 750, "goal-reached-afternoon"),
+                waterSeedEntry(1, 750, "goal-reached-evening"),
+                waterSeedEntry(0, 1000, "above-goal-morning"),
+                waterSeedEntry(0, 750, "above-goal-afternoon"),
+                waterSeedEntry(0, 1000, "above-goal-evening")
+        );
+    }
+
+    private List<WaterSeedEntry> wifeWaterSeedEntries() {
+        return List.of(
+                waterSeedEntry(2, 500, "below-goal-morning"),
+                waterSeedEntry(2, 500, "below-goal-afternoon"),
+                waterSeedEntry(2, 750, "below-goal-evening"),
+                waterSeedEntry(1, 750, "goal-reached-morning"),
+                waterSeedEntry(1, 750, "goal-reached-afternoon"),
+                waterSeedEntry(1, 500, "goal-reached-evening"),
+                waterSeedEntry(0, 1000, "above-goal-morning"),
+                waterSeedEntry(0, 750, "above-goal-afternoon"),
+                waterSeedEntry(0, 500, "above-goal-evening")
+        );
+    }
+
+    private WaterSeedEntry waterSeedEntry(int daysAgo, int amountMl, String seedKey) {
+        return new WaterSeedEntry(daysAgo, amountMl, seedKey);
+    }
+
     private List<FoodSeedEntry> husbandFoodSeedEntries() {
         return List.of(
                 foodSeedEntry(2, MealType.BREAKFAST, "Greek yogurt berry granola", "1.00", "serving", "420.00", "23.00", "55.00", "12.00"),
@@ -217,6 +331,9 @@ public class DataSeeder {
             BigDecimal fatG,
             String seedKey
     ) {
+    }
+
+    private record WaterSeedEntry(int daysAgo, int amountMl, String seedKey) {
     }
 
     private UserProfile createProfile(

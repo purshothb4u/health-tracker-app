@@ -17,6 +17,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import jakarta.validation.ConstraintViolationException;
 
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -41,8 +42,24 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        if (isWaterGoalConstraintViolation(ex)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ErrorResponse.of("A water goal already exists for this user profile"));
+        }
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ErrorResponse.of("A health metric already exists for this user on this date"));
+    }
+
+    private boolean isWaterGoalConstraintViolation(DataIntegrityViolationException ex) {
+        Throwable cause = ex;
+        while (cause != null) {
+            String message = cause.getMessage();
+            if (message != null && message.toLowerCase(Locale.ROOT).contains("uk_water_goals_user_profile")) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
