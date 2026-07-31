@@ -1,12 +1,15 @@
 package com.healthaitracker.config;
 
-import com.healthaitracker.entity.Gender;
+import com.healthaitracker.entity.ActivityCategory;
+import com.healthaitracker.entity.ActivityEntry;
 import com.healthaitracker.entity.FoodEntry;
+import com.healthaitracker.entity.Gender;
 import com.healthaitracker.entity.HealthMetric;
 import com.healthaitracker.entity.MealType;
 import com.healthaitracker.entity.UserProfile;
 import com.healthaitracker.entity.WaterEntry;
 import com.healthaitracker.entity.WaterGoal;
+import com.healthaitracker.repository.ActivityEntryRepository;
 import com.healthaitracker.repository.FoodEntryRepository;
 import com.healthaitracker.repository.HealthMetricRepository;
 import com.healthaitracker.repository.UserProfileRepository;
@@ -30,6 +33,7 @@ public class DataSeeder {
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
     private static final String FOOD_SEED_NOTE_PREFIX = "Development seed data: ";
     private static final String WATER_SEED_NOTE_PREFIX = "Development water seed data: ";
+    private static final String ACTIVITY_SEED_NOTE_PREFIX = "Development activity seed data:";
 
     @Bean
     CommandLineRunner seedUserProfiles(
@@ -38,6 +42,7 @@ public class DataSeeder {
             FoodEntryRepository foodEntryRepository,
             WaterGoalRepository waterGoalRepository,
             WaterEntryRepository waterEntryRepository,
+            ActivityEntryRepository activityEntryRepository,
             TransactionTemplate transactionTemplate,
             @Value("${app.seed-data.enabled:true}") boolean seedEnabled) {
         return args -> {
@@ -50,7 +55,8 @@ public class DataSeeder {
                     healthMetricRepository,
                     foodEntryRepository,
                     waterGoalRepository,
-                    waterEntryRepository));
+                    waterEntryRepository,
+                    activityEntryRepository));
         };
     }
 
@@ -59,7 +65,8 @@ public class DataSeeder {
             HealthMetricRepository healthMetricRepository,
             FoodEntryRepository foodEntryRepository,
             WaterGoalRepository waterGoalRepository,
-            WaterEntryRepository waterEntryRepository) {
+            WaterEntryRepository waterEntryRepository,
+            ActivityEntryRepository activityEntryRepository) {
         List<UserProfile> profiles = userProfileRepository.count() == 0
                 ? seedUserProfiles(userProfileRepository)
                 : userProfileRepository.findAll();
@@ -98,6 +105,7 @@ public class DataSeeder {
 
         seedWaterGoals(profiles, waterGoalRepository);
         seedWaterEntries(profiles, waterEntryRepository);
+        seedActivityEntries(profiles, activityEntryRepository);
     }
 
     private List<UserProfile> seedUserProfiles(UserProfileRepository userProfileRepository) {
@@ -257,6 +265,98 @@ public class DataSeeder {
         );
     }
 
+    private void seedActivityEntries(
+            List<UserProfile> profiles,
+            ActivityEntryRepository activityEntryRepository) {
+        if (activityEntryRepository.existsByNotesStartingWith(ACTIVITY_SEED_NOTE_PREFIX)) {
+            log.info("Development activity seed data already exists; preserving the original seeded dates.");
+            return;
+        }
+
+        profiles.stream()
+                .filter(profile -> "Husband".equals(profile.getName()))
+                .findFirst()
+                .ifPresent(profile -> seedActivityEntries(
+                        profile,
+                        husbandActivitySeedEntries(),
+                        activityEntryRepository));
+
+        profiles.stream()
+                .filter(profile -> "Wife".equals(profile.getName()))
+                .findFirst()
+                .ifPresent(profile -> seedActivityEntries(
+                        profile,
+                        wifeActivitySeedEntries(),
+                        activityEntryRepository));
+    }
+
+    private void seedActivityEntries(
+            UserProfile profile,
+            List<ActivitySeedEntry> seedEntries,
+            ActivityEntryRepository activityEntryRepository) {
+        for (ActivitySeedEntry seedEntry : seedEntries) {
+            ActivityEntry activityEntry = new ActivityEntry();
+            activityEntry.setUserProfile(profile);
+            activityEntry.setActivityDate(LocalDate.now().minusDays(seedEntry.daysAgo()));
+            activityEntry.setCategory(seedEntry.category());
+            activityEntry.setActivityName(seedEntry.activityName());
+            activityEntry.setDurationMinutes(seedEntry.durationMinutes());
+            activityEntry.setSteps(seedEntry.steps());
+            activityEntry.setDistanceKm(seedEntry.distanceKm());
+            activityEntry.setReportedCaloriesBurned(seedEntry.reportedCaloriesBurned());
+            activityEntry.setNotes(ACTIVITY_SEED_NOTE_PREFIX
+                    + " " + profile.getName() + " / " + seedEntry.seedKey());
+            activityEntryRepository.save(activityEntry);
+        }
+    }
+
+    private List<ActivitySeedEntry> husbandActivitySeedEntries() {
+        return List.of(
+                activitySeedEntry(2, ActivityCategory.WALKING, "Neighbourhood walk", 40,
+                        4_500, "3.250", null, "walking-with-steps-distance"),
+                activitySeedEntry(1, ActivityCategory.STRENGTH_TRAINING, "Strength training", 45,
+                        null, null, 320, "strength-with-reported-calories"),
+                activitySeedEntry(0, ActivityCategory.WALKING, "Short walk", 30,
+                        0, "0.000", null, "walking-with-explicit-zero"),
+                activitySeedEntry(0, ActivityCategory.OTHER, "Mobility session", 20,
+                        null, null, null, "activity-with-measurements-unavailable")
+        );
+    }
+
+    private List<ActivitySeedEntry> wifeActivitySeedEntries() {
+        return List.of(
+                activitySeedEntry(2, ActivityCategory.YOGA, "Yoga session", 35,
+                        null, null, null, "yoga-with-measurements-unavailable"),
+                activitySeedEntry(1, ActivityCategory.CYCLING, "Leisure cycling", 40,
+                        null, "12.500", 280, "cycling-with-distance-calories"),
+                activitySeedEntry(0, ActivityCategory.WALKING, "Park walk", 30,
+                        3_800, "2.750", null, "walking-with-steps-distance"),
+                activitySeedEntry(0, ActivityCategory.YOGA, "Evening yoga", 20,
+                        null, null, 0, "yoga-with-explicit-zero-calories")
+        );
+    }
+
+    private ActivitySeedEntry activitySeedEntry(
+            int daysAgo,
+            ActivityCategory category,
+            String activityName,
+            int durationMinutes,
+            Integer steps,
+            String distanceKm,
+            Integer reportedCaloriesBurned,
+            String seedKey) {
+        return new ActivitySeedEntry(
+                daysAgo,
+                category,
+                activityName,
+                durationMinutes,
+                steps,
+                distanceKm == null ? null : new BigDecimal(distanceKm),
+                reportedCaloriesBurned,
+                seedKey
+        );
+    }
+
     private WaterSeedEntry waterSeedEntry(int daysAgo, int amountMl, String seedKey) {
         return new WaterSeedEntry(daysAgo, amountMl, seedKey);
     }
@@ -334,6 +434,18 @@ public class DataSeeder {
     }
 
     private record WaterSeedEntry(int daysAgo, int amountMl, String seedKey) {
+    }
+
+    private record ActivitySeedEntry(
+            int daysAgo,
+            ActivityCategory category,
+            String activityName,
+            int durationMinutes,
+            Integer steps,
+            BigDecimal distanceKm,
+            Integer reportedCaloriesBurned,
+            String seedKey
+    ) {
     }
 
     private UserProfile createProfile(
