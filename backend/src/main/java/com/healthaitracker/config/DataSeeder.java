@@ -6,12 +6,15 @@ import com.healthaitracker.entity.FoodEntry;
 import com.healthaitracker.entity.Gender;
 import com.healthaitracker.entity.HealthMetric;
 import com.healthaitracker.entity.MealType;
+import com.healthaitracker.entity.SleepEntry;
+import com.healthaitracker.entity.SleepType;
 import com.healthaitracker.entity.UserProfile;
 import com.healthaitracker.entity.WaterEntry;
 import com.healthaitracker.entity.WaterGoal;
 import com.healthaitracker.repository.ActivityEntryRepository;
 import com.healthaitracker.repository.FoodEntryRepository;
 import com.healthaitracker.repository.HealthMetricRepository;
+import com.healthaitracker.repository.SleepEntryRepository;
 import com.healthaitracker.repository.UserProfileRepository;
 import com.healthaitracker.repository.WaterEntryRepository;
 import com.healthaitracker.repository.WaterGoalRepository;
@@ -25,6 +28,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Configuration
@@ -34,6 +38,7 @@ public class DataSeeder {
     private static final String FOOD_SEED_NOTE_PREFIX = "Development seed data: ";
     private static final String WATER_SEED_NOTE_PREFIX = "Development water seed data: ";
     private static final String ACTIVITY_SEED_NOTE_PREFIX = "Development activity seed data:";
+    private static final String SLEEP_SEED_NOTE_PREFIX = "Development sleep seed data:";
 
     @Bean
     CommandLineRunner seedUserProfiles(
@@ -43,6 +48,7 @@ public class DataSeeder {
             WaterGoalRepository waterGoalRepository,
             WaterEntryRepository waterEntryRepository,
             ActivityEntryRepository activityEntryRepository,
+            SleepEntryRepository sleepEntryRepository,
             TransactionTemplate transactionTemplate,
             @Value("${app.seed-data.enabled:true}") boolean seedEnabled) {
         return args -> {
@@ -56,7 +62,8 @@ public class DataSeeder {
                     foodEntryRepository,
                     waterGoalRepository,
                     waterEntryRepository,
-                    activityEntryRepository));
+                    activityEntryRepository,
+                    sleepEntryRepository));
         };
     }
 
@@ -66,7 +73,8 @@ public class DataSeeder {
             FoodEntryRepository foodEntryRepository,
             WaterGoalRepository waterGoalRepository,
             WaterEntryRepository waterEntryRepository,
-            ActivityEntryRepository activityEntryRepository) {
+            ActivityEntryRepository activityEntryRepository,
+            SleepEntryRepository sleepEntryRepository) {
         List<UserProfile> profiles = userProfileRepository.count() == 0
                 ? seedUserProfiles(userProfileRepository)
                 : userProfileRepository.findAll();
@@ -106,6 +114,7 @@ public class DataSeeder {
         seedWaterGoals(profiles, waterGoalRepository);
         seedWaterEntries(profiles, waterEntryRepository);
         seedActivityEntries(profiles, activityEntryRepository);
+        seedSleepEntries(profiles, sleepEntryRepository);
     }
 
     private List<UserProfile> seedUserProfiles(UserProfileRepository userProfileRepository) {
@@ -357,6 +366,93 @@ public class DataSeeder {
         );
     }
 
+    private void seedSleepEntries(
+            List<UserProfile> profiles,
+            SleepEntryRepository sleepEntryRepository) {
+        if (sleepEntryRepository.existsByNotesStartingWith(SLEEP_SEED_NOTE_PREFIX)) {
+            log.info("Development sleep seed data already exists; preserving the original seeded dates.");
+            return;
+        }
+
+        profiles.stream()
+                .filter(profile -> "Husband".equals(profile.getName()))
+                .findFirst()
+                .ifPresent(profile -> seedSleepEntries(
+                        profile,
+                        husbandSleepSeedEntries(),
+                        sleepEntryRepository));
+
+        profiles.stream()
+                .filter(profile -> "Wife".equals(profile.getName()))
+                .findFirst()
+                .ifPresent(profile -> seedSleepEntries(
+                        profile,
+                        wifeSleepSeedEntries(),
+                        sleepEntryRepository));
+    }
+
+    private void seedSleepEntries(
+            UserProfile profile,
+            List<SleepSeedEntry> seedEntries,
+            SleepEntryRepository sleepEntryRepository) {
+        for (SleepSeedEntry seedEntry : seedEntries) {
+            LocalDate sleepDate = LocalDate.now().minusDays(seedEntry.daysAgo());
+            LocalDateTime endDateTime = sleepDate.atTime(seedEntry.endHour(), seedEntry.endMinute());
+
+            SleepEntry sleepEntry = new SleepEntry();
+            sleepEntry.setUserProfile(profile);
+            sleepEntry.setSleepDate(sleepDate);
+            sleepEntry.setSleepType(seedEntry.sleepType());
+            sleepEntry.setStartDateTime(endDateTime.minusMinutes(seedEntry.durationMinutes()));
+            sleepEntry.setEndDateTime(endDateTime);
+            sleepEntry.setQualityRating(seedEntry.qualityRating());
+            sleepEntry.setNotes(SLEEP_SEED_NOTE_PREFIX
+                    + " " + profile.getName() + " / " + seedEntry.seedKey());
+            sleepEntryRepository.save(sleepEntry);
+        }
+    }
+
+    private List<SleepSeedEntry> husbandSleepSeedEntries() {
+        return List.of(
+                sleepSeedEntry(2, SleepType.NIGHT_SLEEP, 6, 30, 480, 4,
+                        "cross-midnight-night-sleep"),
+                sleepSeedEntry(2, SleepType.NAP, 14, 0, 30, null,
+                        "afternoon-nap-without-quality"),
+                sleepSeedEntry(1, SleepType.NIGHT_SLEEP, 7, 0, 480, 5,
+                        "night-sleep-with-quality")
+        );
+    }
+
+    private List<SleepSeedEntry> wifeSleepSeedEntries() {
+        return List.of(
+                sleepSeedEntry(2, SleepType.NIGHT_SLEEP, 6, 45, 480, 5,
+                        "cross-midnight-night-sleep"),
+                sleepSeedEntry(2, SleepType.NAP, 13, 45, 45, null,
+                        "afternoon-nap-without-quality"),
+                sleepSeedEntry(1, SleepType.NIGHT_SLEEP, 6, 45, 450, 4,
+                        "night-sleep-with-quality")
+        );
+    }
+
+    private SleepSeedEntry sleepSeedEntry(
+            int daysAgo,
+            SleepType sleepType,
+            int endHour,
+            int endMinute,
+            int durationMinutes,
+            Integer qualityRating,
+            String seedKey) {
+        return new SleepSeedEntry(
+                daysAgo,
+                sleepType,
+                endHour,
+                endMinute,
+                durationMinutes,
+                qualityRating,
+                seedKey
+        );
+    }
+
     private WaterSeedEntry waterSeedEntry(int daysAgo, int amountMl, String seedKey) {
         return new WaterSeedEntry(daysAgo, amountMl, seedKey);
     }
@@ -444,6 +540,17 @@ public class DataSeeder {
             Integer steps,
             BigDecimal distanceKm,
             Integer reportedCaloriesBurned,
+            String seedKey
+    ) {
+    }
+
+    private record SleepSeedEntry(
+            int daysAgo,
+            SleepType sleepType,
+            int endHour,
+            int endMinute,
+            int durationMinutes,
+            Integer qualityRating,
             String seedKey
     ) {
     }

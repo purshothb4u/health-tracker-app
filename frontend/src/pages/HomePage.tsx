@@ -2,6 +2,7 @@ import HealthMetricsPanel from '../components/HealthMetricsPanel'
 import FoodTrackingPanel from '../components/FoodTrackingPanel'
 import WaterTrackingPanel from '../components/WaterTrackingPanel'
 import ActivityTrackingPanel from '../components/ActivityTrackingPanel'
+import SleepTrackingPanel from '../components/SleepTrackingPanel'
 import AnalyticsPanel from '../components/AnalyticsPanel'
 import UserProfileCard from '../components/UserProfileCard'
 import { useUserProfiles } from '../hooks/useUserProfiles'
@@ -54,6 +55,7 @@ export default function HomePage() {
                 <FoodTrackingPanel profile={profile} />
                 <WaterTrackingPanel profileName={profile.name} userProfileId={profile.id} />
                 <ActivityTrackingPanel profileName={profile.name} userProfileId={profile.id} />
+                <SleepTrackingPanel profileName={profile.name} userProfileId={profile.id} />
               </div>
               <AnalyticsPanel profileName={profile.name} userProfileId={profile.id} />
             </div>
