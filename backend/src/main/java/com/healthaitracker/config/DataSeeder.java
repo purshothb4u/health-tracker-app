@@ -2,9 +2,18 @@ package com.healthaitracker.config;
 
 import com.healthaitracker.entity.ActivityCategory;
 import com.healthaitracker.entity.ActivityEntry;
+import com.healthaitracker.entity.ChallengeCheckIn;
+import com.healthaitracker.entity.ChallengeStatus;
+import com.healthaitracker.entity.ChallengeType;
+import com.healthaitracker.entity.CoupleChallenge;
+import com.healthaitracker.entity.CoupleChallengeParticipant;
 import com.healthaitracker.entity.FoodEntry;
 import com.healthaitracker.entity.Gender;
 import com.healthaitracker.entity.HealthMetric;
+import com.healthaitracker.entity.Goal;
+import com.healthaitracker.entity.GoalCheckIn;
+import com.healthaitracker.entity.GoalStatus;
+import com.healthaitracker.entity.GoalType;
 import com.healthaitracker.entity.MealType;
 import com.healthaitracker.entity.SleepEntry;
 import com.healthaitracker.entity.SleepType;
@@ -12,8 +21,13 @@ import com.healthaitracker.entity.UserProfile;
 import com.healthaitracker.entity.WaterEntry;
 import com.healthaitracker.entity.WaterGoal;
 import com.healthaitracker.repository.ActivityEntryRepository;
+import com.healthaitracker.repository.ChallengeCheckInRepository;
+import com.healthaitracker.repository.CoupleChallengeParticipantRepository;
+import com.healthaitracker.repository.CoupleChallengeRepository;
 import com.healthaitracker.repository.FoodEntryRepository;
 import com.healthaitracker.repository.HealthMetricRepository;
+import com.healthaitracker.repository.GoalCheckInRepository;
+import com.healthaitracker.repository.GoalRepository;
 import com.healthaitracker.repository.SleepEntryRepository;
 import com.healthaitracker.repository.UserProfileRepository;
 import com.healthaitracker.repository.WaterEntryRepository;
@@ -39,6 +53,9 @@ public class DataSeeder {
     private static final String WATER_SEED_NOTE_PREFIX = "Development water seed data: ";
     private static final String ACTIVITY_SEED_NOTE_PREFIX = "Development activity seed data:";
     private static final String SLEEP_SEED_NOTE_PREFIX = "Development sleep seed data:";
+    private static final String GOAL_SEED_NOTE_PREFIX = "Development goal seed data:";
+    private static final String CHALLENGE_SEED_NOTE_PREFIX =
+            "Development couple challenge seed data:";
 
     @Bean
     CommandLineRunner seedUserProfiles(
@@ -49,6 +66,11 @@ public class DataSeeder {
             WaterEntryRepository waterEntryRepository,
             ActivityEntryRepository activityEntryRepository,
             SleepEntryRepository sleepEntryRepository,
+            GoalRepository goalRepository,
+            GoalCheckInRepository goalCheckInRepository,
+            CoupleChallengeRepository challengeRepository,
+            CoupleChallengeParticipantRepository participantRepository,
+            ChallengeCheckInRepository challengeCheckInRepository,
             TransactionTemplate transactionTemplate,
             @Value("${app.seed-data.enabled:true}") boolean seedEnabled) {
         return args -> {
@@ -63,7 +85,12 @@ public class DataSeeder {
                     waterGoalRepository,
                     waterEntryRepository,
                     activityEntryRepository,
-                    sleepEntryRepository));
+                    sleepEntryRepository,
+                    goalRepository,
+                    goalCheckInRepository,
+                    challengeRepository,
+                    participantRepository,
+                    challengeCheckInRepository));
         };
     }
 
@@ -74,7 +101,12 @@ public class DataSeeder {
             WaterGoalRepository waterGoalRepository,
             WaterEntryRepository waterEntryRepository,
             ActivityEntryRepository activityEntryRepository,
-            SleepEntryRepository sleepEntryRepository) {
+            SleepEntryRepository sleepEntryRepository,
+            GoalRepository goalRepository,
+            GoalCheckInRepository goalCheckInRepository,
+            CoupleChallengeRepository challengeRepository,
+            CoupleChallengeParticipantRepository participantRepository,
+            ChallengeCheckInRepository challengeCheckInRepository) {
         List<UserProfile> profiles = userProfileRepository.count() == 0
                 ? seedUserProfiles(userProfileRepository)
                 : userProfileRepository.findAll();
@@ -115,6 +147,239 @@ public class DataSeeder {
         seedWaterEntries(profiles, waterEntryRepository);
         seedActivityEntries(profiles, activityEntryRepository);
         seedSleepEntries(profiles, sleepEntryRepository);
+        seedGoals(profiles, goalRepository, goalCheckInRepository);
+        seedCoupleChallenges(
+                profiles,
+                challengeRepository,
+                participantRepository,
+                challengeCheckInRepository);
+    }
+
+    private void seedGoals(
+            List<UserProfile> profiles,
+            GoalRepository goalRepository,
+            GoalCheckInRepository goalCheckInRepository) {
+        if (goalRepository.existsByNotesStartingWith(GOAL_SEED_NOTE_PREFIX)) {
+            log.info("Development goal seed data already exists; preserving the original seeded dates.");
+            return;
+        }
+
+        UserProfile husband = findProfile(profiles, "Husband");
+        UserProfile wife = findProfile(profiles, "Wife");
+        LocalDate today = LocalDate.now();
+
+        if (husband != null) {
+            Goal activityGoal = createGoal(
+                    husband,
+                    "Build a regular activity routine",
+                    GoalType.ACTIVITY_MINUTES,
+                    today.minusDays(6),
+                    today.plusDays(7),
+                    180L,
+                    null,
+                    null,
+                    GoalStatus.ACTIVE,
+                    GOAL_SEED_NOTE_PREFIX + " Husband / active activity minutes");
+            goalRepository.save(activityGoal);
+
+            Goal completedCheckInGoal = createGoal(
+                    husband,
+                    "Complete three wellbeing check-ins",
+                    GoalType.CUSTOM_CHECK_IN,
+                    today.minusDays(6),
+                    today,
+                    3L,
+                    null,
+                    "check-ins",
+                    GoalStatus.COMPLETED,
+                    GOAL_SEED_NOTE_PREFIX + " Husband / completed custom check-in");
+            completedCheckInGoal.setCompletedAt(LocalDateTime.now());
+            completedCheckInGoal = goalRepository.save(completedCheckInGoal);
+            seedGoalCheckIn(completedCheckInGoal, today.minusDays(2), "Completed check-in 1", goalCheckInRepository);
+            seedGoalCheckIn(completedCheckInGoal, today.minusDays(1), "Completed check-in 2", goalCheckInRepository);
+            seedGoalCheckIn(completedCheckInGoal, today, "Completed check-in 3", goalCheckInRepository);
+        }
+
+        if (wife != null) {
+            Goal sleepGoal = createGoal(
+                    wife,
+                    "Maintain a consistent sleep routine",
+                    GoalType.SLEEP_TARGET_DAYS,
+                    today.minusDays(6),
+                    today.plusDays(7),
+                    3L,
+                    420,
+                    null,
+                    GoalStatus.ACTIVE,
+                    GOAL_SEED_NOTE_PREFIX + " Wife / active sleep target days");
+            goalRepository.save(sleepGoal);
+        }
+    }
+
+    private Goal createGoal(
+            UserProfile profile,
+            String title,
+            GoalType goalType,
+            LocalDate startDate,
+            LocalDate endDate,
+            long targetValue,
+            Integer qualifyingSleepMinutes,
+            String customUnit,
+            GoalStatus status,
+            String notes) {
+        Goal goal = new Goal();
+        goal.setUserProfile(profile);
+        goal.setTitle(title);
+        goal.setGoalType(goalType);
+        goal.setStartDate(startDate);
+        goal.setEndDate(endDate);
+        goal.setTargetValue(targetValue);
+        goal.setQualifyingSleepMinutes(qualifyingSleepMinutes);
+        goal.setCustomUnit(customUnit);
+        goal.setStatus(status);
+        goal.setNotes(notes);
+        return goal;
+    }
+
+    private void seedGoalCheckIn(
+            Goal goal,
+            LocalDate date,
+            String notes,
+            GoalCheckInRepository goalCheckInRepository) {
+        GoalCheckIn checkIn = new GoalCheckIn();
+        checkIn.setGoal(goal);
+        checkIn.setCheckInDate(date);
+        checkIn.setCompleted(true);
+        checkIn.setNotes(notes);
+        goalCheckInRepository.save(checkIn);
+    }
+
+    private void seedCoupleChallenges(
+            List<UserProfile> profiles,
+            CoupleChallengeRepository challengeRepository,
+            CoupleChallengeParticipantRepository participantRepository,
+            ChallengeCheckInRepository checkInRepository) {
+        if (challengeRepository.existsByNotesStartingWith(CHALLENGE_SEED_NOTE_PREFIX)) {
+            log.info("Development couple challenge seed data already exists; preserving the original seeded dates.");
+            return;
+        }
+
+        UserProfile husband = findProfile(profiles, "Husband");
+        UserProfile wife = findProfile(profiles, "Wife");
+        if (husband == null || wife == null || husband.getId().equals(wife.getId())) {
+            log.warn("Skipping development couple challenge seed data because Husband and Wife profiles are unavailable.");
+            return;
+        }
+
+        LocalDate today = LocalDate.now();
+        CoupleChallenge activeChallenge = createChallenge(
+                "Complete shared daily check-ins",
+                today.minusDays(3),
+                today.plusDays(3),
+                3L,
+                ChallengeStatus.ACTIVE,
+                CHALLENGE_SEED_NOTE_PREFIX + " active custom check-in");
+        activeChallenge = challengeRepository.save(activeChallenge);
+        List<CoupleChallengeParticipant> activeParticipants = seedParticipants(
+                activeChallenge,
+                husband,
+                wife,
+                participantRepository);
+        seedChallengeCheckIn(
+                activeParticipants.get(0),
+                today.minusDays(2),
+                "Husband active check-in 1",
+                checkInRepository);
+        seedChallengeCheckIn(
+                activeParticipants.get(0),
+                today.minusDays(1),
+                "Husband active check-in 2",
+                checkInRepository);
+        seedChallengeCheckIn(
+                activeParticipants.get(1),
+                today.minusDays(2),
+                "Wife active check-in 1",
+                checkInRepository);
+
+        CoupleChallenge completedChallenge = createChallenge(
+                "Complete a shared two-day check-in challenge",
+                today.minusDays(6),
+                today.minusDays(1),
+                2L,
+                ChallengeStatus.COMPLETED,
+                CHALLENGE_SEED_NOTE_PREFIX + " completed custom check-in");
+        completedChallenge.setCompletedAt(today.minusDays(1).atTime(20, 0));
+        completedChallenge = challengeRepository.save(completedChallenge);
+        List<CoupleChallengeParticipant> completedParticipants = seedParticipants(
+                completedChallenge,
+                husband,
+                wife,
+                participantRepository);
+        for (CoupleChallengeParticipant participant : completedParticipants) {
+            seedChallengeCheckIn(
+                    participant,
+                    today.minusDays(3),
+                    participant.getUserProfile().getName() + " completed check-in 1",
+                    checkInRepository);
+            seedChallengeCheckIn(
+                    participant,
+                    today.minusDays(2),
+                    participant.getUserProfile().getName() + " completed check-in 2",
+                    checkInRepository);
+        }
+    }
+
+    private CoupleChallenge createChallenge(
+            String title,
+            LocalDate startDate,
+            LocalDate endDate,
+            long targetValue,
+            ChallengeStatus status,
+            String notes) {
+        CoupleChallenge challenge = new CoupleChallenge();
+        challenge.setTitle(title);
+        challenge.setChallengeType(ChallengeType.CUSTOM_CHECK_IN);
+        challenge.setStartDate(startDate);
+        challenge.setEndDate(endDate);
+        challenge.setTargetValue(targetValue);
+        challenge.setCustomUnit("check-ins");
+        challenge.setStatus(status);
+        challenge.setNotes(notes);
+        return challenge;
+    }
+
+    private List<CoupleChallengeParticipant> seedParticipants(
+            CoupleChallenge challenge,
+            UserProfile husband,
+            UserProfile wife,
+            CoupleChallengeParticipantRepository participantRepository) {
+        CoupleChallengeParticipant husbandParticipant = new CoupleChallengeParticipant();
+        husbandParticipant.setCoupleChallenge(challenge);
+        husbandParticipant.setUserProfile(husband);
+        CoupleChallengeParticipant wifeParticipant = new CoupleChallengeParticipant();
+        wifeParticipant.setCoupleChallenge(challenge);
+        wifeParticipant.setUserProfile(wife);
+        return participantRepository.saveAll(List.of(husbandParticipant, wifeParticipant));
+    }
+
+    private void seedChallengeCheckIn(
+            CoupleChallengeParticipant participant,
+            LocalDate date,
+            String notes,
+            ChallengeCheckInRepository checkInRepository) {
+        ChallengeCheckIn checkIn = new ChallengeCheckIn();
+        checkIn.setParticipant(participant);
+        checkIn.setCheckInDate(date);
+        checkIn.setCompleted(true);
+        checkIn.setNotes(notes);
+        checkInRepository.save(checkIn);
+    }
+
+    private UserProfile findProfile(List<UserProfile> profiles, String name) {
+        return profiles.stream()
+                .filter(profile -> name.equals(profile.getName()))
+                .findFirst()
+                .orElse(null);
     }
 
     private List<UserProfile> seedUserProfiles(UserProfileRepository userProfileRepository) {

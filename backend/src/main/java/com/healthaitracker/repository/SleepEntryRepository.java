@@ -14,6 +14,12 @@ public interface SleepEntryRepository extends JpaRepository<SleepEntry, Long> {
             LocalDate sleepDate
     );
 
+    List<SleepEntry> findByUserProfileIdAndSleepDateBetweenOrderBySleepDateAscStartDateTimeAscCreatedAtAscIdAsc(
+            Long userProfileId,
+            LocalDate fromDate,
+            LocalDate toDate
+    );
+
     Optional<SleepEntry> findByIdAndUserProfileId(Long id, Long userProfileId);
 
     boolean existsByNotesStartingWith(String notesPrefix);

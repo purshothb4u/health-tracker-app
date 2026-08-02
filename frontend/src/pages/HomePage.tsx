@@ -4,11 +4,20 @@ import WaterTrackingPanel from '../components/WaterTrackingPanel'
 import ActivityTrackingPanel from '../components/ActivityTrackingPanel'
 import SleepTrackingPanel from '../components/SleepTrackingPanel'
 import AnalyticsPanel from '../components/AnalyticsPanel'
+import CoupleChallengesPanel from '../components/CoupleChallengesPanel'
+import GoalsPanel from '../components/GoalsPanel'
 import UserProfileCard from '../components/UserProfileCard'
 import { useUserProfiles } from '../hooks/useUserProfiles'
 
 export default function HomePage() {
   const { profiles, loading, error, reload } = useUserProfiles()
+  const orderedProfiles = [...profiles].sort((left, right) => {
+    const order: Record<string, number> = { Husband: 0, Wife: 1 }
+    return (order[left.name] ?? 2) - (order[right.name] ?? 2)
+  })
+  const coupleProfileIds = orderedProfiles
+    .filter((profile) => profile.name === 'Husband' || profile.name === 'Wife')
+    .map((profile) => profile.id)
 
   return (
     <div className="space-y-6">
@@ -46,11 +55,13 @@ export default function HomePage() {
       )}
 
       {!loading && !error && profiles.length > 0 && (
-        <div className="grid min-w-0 gap-4">
-          {profiles.map((profile) => (
+        <div className="grid min-w-0 gap-6">
+          <CoupleChallengesPanel participantUserProfileIds={coupleProfileIds} />
+          {orderedProfiles.map((profile) => (
             <div key={profile.id} className="min-w-0 space-y-4">
               <div className="w-full min-w-0 max-w-lg space-y-4">
                 <UserProfileCard profile={profile} />
+                <GoalsPanel profileName={profile.name} userProfileId={profile.id} />
                 <HealthMetricsPanel profile={profile} onMetricSaved={reload} />
                 <FoodTrackingPanel profile={profile} />
                 <WaterTrackingPanel profileName={profile.name} userProfileId={profile.id} />

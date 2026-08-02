@@ -14,6 +14,12 @@ public interface WaterEntryRepository extends JpaRepository<WaterEntry, Long> {
             LocalDate entryDate
     );
 
+    List<WaterEntry> findByUserProfileIdAndEntryDateBetweenOrderByEntryDateAscCreatedAtAscIdAsc(
+            Long userProfileId,
+            LocalDate fromDate,
+            LocalDate toDate
+    );
+
     Optional<WaterEntry> findByIdAndUserProfileId(Long id, Long userProfileId);
 
     boolean existsByNotesStartingWith(String notesPrefix);

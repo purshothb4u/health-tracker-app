@@ -14,6 +14,12 @@ public interface ActivityEntryRepository extends JpaRepository<ActivityEntry, Lo
             LocalDate activityDate
     );
 
+    List<ActivityEntry> findByUserProfileIdAndActivityDateBetweenOrderByActivityDateAscCreatedAtAscIdAsc(
+            Long userProfileId,
+            LocalDate fromDate,
+            LocalDate toDate
+    );
+
     Optional<ActivityEntry> findByIdAndUserProfileId(Long id, Long userProfileId);
 
     boolean existsByNotesStartingWith(String notesPrefix);
