@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { Goal, GoalRequest, GoalType } from '../types/Goal'
 import { GOAL_TYPE_LABELS } from '../types/Goal'
+import { Alert } from './ui/Alert'
+import { Button } from './ui/Button'
+import { Card } from './ui/Card'
+import { Field } from './ui/Field'
+import { SectionHeader } from './ui/SectionHeader'
 
 interface GoalFormProps {
   editingGoal: Goal | null
@@ -83,60 +88,82 @@ export default function GoalForm({ editingGoal, mutating, onCancel, onSubmit }: 
     }
   }
 
-  const inputClass = 'mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900'
+  const inputClass = 'min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-app-secondary'
 
   return (
-    <form className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm" onSubmit={handleSubmit}>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h4 className="font-semibold text-gray-900">{editingGoal ? 'Edit goal' : 'Create goal'}</h4>
-        <button className="text-sm font-medium text-gray-600 hover:text-gray-900" type="button" onClick={onCancel}>
-          Close
-        </button>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-medium text-gray-700 sm:col-span-2">
-          Title
-          <input className={inputClass} disabled={mutating} maxLength={100} required value={title} onChange={(event) => setTitle(event.target.value)} />
-        </label>
-        <label className="text-sm font-medium text-gray-700">
-          Goal type
-          <select className={inputClass} disabled={mutating || editingGoal !== null} value={goalType} onChange={(event) => setGoalType(event.target.value as GoalType)}>
-            {Object.entries(GOAL_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-        </label>
-        <label className="text-sm font-medium text-gray-700">
-          Target value
-          <input className={inputClass} disabled={mutating} min="1" required step="1" type="number" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} />
-        </label>
-        <label className="text-sm font-medium text-gray-700">
-          Start date
-          <input className={inputClass} disabled={mutating} required type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
-        </label>
-        <label className="text-sm font-medium text-gray-700">
-          End date
-          <input className={inputClass} disabled={mutating} min={startDate} required type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
-        </label>
-        {goalType === 'SLEEP_TARGET_DAYS' && (
-          <label className="text-sm font-medium text-gray-700">
-            Sleep target minutes
-            <input className={inputClass} disabled={mutating} max="1440" min="1" required step="1" type="number" value={sleepMinutes} onChange={(event) => setSleepMinutes(event.target.value)} />
-          </label>
+    <Card padding="normal" className="min-w-0 border-primary-200 bg-primary-50/30">
+      <SectionHeader
+        headingId="personal-goal-form-heading"
+        headingLevel={3}
+        title={editingGoal ? 'Edit personal goal' : 'Create personal goal'}
+        description={editingGoal
+          ? 'Goal type remains fixed while editing.'
+          : 'Set a measurable target for the selected profile.'}
+        actions={(
+          <Button variant="secondary" disabled={mutating} onClick={onCancel}>
+            {editingGoal ? 'Cancel edit' : 'Cancel'}
+          </Button>
         )}
-        {goalType === 'CUSTOM_CHECK_IN' && (
-          <label className="text-sm font-medium text-gray-700">
-            Custom unit (optional)
-            <input className={inputClass} disabled={mutating} maxLength={30} value={customUnit} onChange={(event) => setCustomUnit(event.target.value)} />
-          </label>
-        )}
-        <label className="text-sm font-medium text-gray-700 sm:col-span-2">
-          Notes (optional)
-          <textarea className={inputClass} disabled={mutating} maxLength={500} rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} />
-        </label>
-      </div>
-      {formError && <p className="mt-3 text-sm font-medium text-red-700" role="alert">{formError}</p>}
-      <button className="mt-4 w-full rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60 sm:w-auto" disabled={mutating} type="submit">
-        {editingGoal ? 'Save changes' : 'Create goal'}
-      </button>
-    </form>
+      />
+      <form
+        className="mt-5 space-y-5"
+        aria-describedby={formError ? 'personal-goal-form-error' : undefined}
+        aria-labelledby="personal-goal-form-heading"
+        onSubmit={handleSubmit}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field className="sm:col-span-2" label="Title" required hint="Use a clear title up to 100 characters.">
+            {(controlProps) => (
+              <input {...controlProps} className={inputClass} disabled={mutating} maxLength={100} value={title} onChange={(event) => setTitle(event.target.value)} />
+            )}
+          </Field>
+          <Field label="Goal type" required hint={editingGoal ? 'Goal type cannot be changed after creation.' : undefined}>
+            {(controlProps) => (
+              <select {...controlProps} className={inputClass} disabled={mutating || editingGoal !== null} value={goalType} onChange={(event) => setGoalType(event.target.value as GoalType)}>
+                {Object.entries(GOAL_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            )}
+          </Field>
+          <Field label="Target value" required hint="Enter a positive whole number.">
+            {(controlProps) => (
+              <input {...controlProps} className={inputClass} disabled={mutating} min="1" step="1" type="number" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} />
+            )}
+          </Field>
+          <Field label="Start date" required>
+            {(controlProps) => (
+              <input {...controlProps} className={inputClass} disabled={mutating} type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+            )}
+          </Field>
+          <Field label="End date" required hint="The end date must be on or after the start date.">
+            {(controlProps) => (
+              <input {...controlProps} className={inputClass} disabled={mutating} min={startDate} type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+            )}
+          </Field>
+          {goalType === 'SLEEP_TARGET_DAYS' ? (
+            <Field label="Qualifying sleep minutes" required hint="Enter a whole number from 1 to 1,440.">
+              {(controlProps) => (
+                <input {...controlProps} className={inputClass} disabled={mutating} max="1440" min="1" step="1" type="number" value={sleepMinutes} onChange={(event) => setSleepMinutes(event.target.value)} />
+              )}
+            </Field>
+          ) : null}
+          {goalType === 'CUSTOM_CHECK_IN' ? (
+            <Field label="Custom unit" optional hint="Up to 30 characters.">
+              {(controlProps) => (
+                <input {...controlProps} className={inputClass} disabled={mutating} maxLength={30} value={customUnit} onChange={(event) => setCustomUnit(event.target.value)} />
+              )}
+            </Field>
+          ) : null}
+          <Field className="sm:col-span-2" label="Notes" optional hint="Up to 500 characters.">
+            {(controlProps) => (
+              <textarea {...controlProps} className={inputClass} disabled={mutating} maxLength={500} rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} />
+            )}
+          </Field>
+        </div>
+        {formError ? <Alert id="personal-goal-form-error" tone="error" title="Unable to save goal">{formError}</Alert> : null}
+        <Button className="w-full sm:w-auto" disabled={mutating} type="submit">
+          {mutating ? 'Saving goal...' : editingGoal ? 'Save goal changes' : 'Create goal'}
+        </Button>
+      </form>
+    </Card>
   )
 }

@@ -1,4 +1,6 @@
 import type { Achievement } from '../types/Goal'
+import { Card } from './ui/Card'
+import { StatusBadge } from './ui/StatusBadge'
 
 interface AchievementBadgeProps {
   achievement: Achievement
@@ -6,11 +8,14 @@ interface AchievementBadgeProps {
 
 export default function AchievementBadge({ achievement }: AchievementBadgeProps) {
   return (
-    <article className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-      <p className="text-sm font-semibold text-amber-900">{achievement.title}</p>
-      <p className="mt-1 text-xs leading-5 text-amber-800">
+    <Card as="article" padding="compact" className="min-w-0 border-warning-border bg-warning-surface">
+      <StatusBadge tone="warning">Achievement</StatusBadge>
+      <h4 className="mt-3 break-words text-sm font-semibold text-app-primary">
+        {achievement.title}
+      </h4>
+      <p className="mt-1 break-words text-sm leading-6 text-app-secondary">
         {achievement.supportiveDescription}
       </p>
-    </article>
+    </Card>
   )
 }

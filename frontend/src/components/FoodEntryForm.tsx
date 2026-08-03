@@ -1,5 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import type { FoodEntry, FoodEntryRequest, MealType } from '../types/FoodEntry'
+import { formatLocalDate } from '../utils/dateFormatting'
+import { Alert } from './ui/Alert'
+import { Button } from './ui/Button'
+import { Card } from './ui/Card'
+import { Field } from './ui/Field'
+import { SectionHeader } from './ui/SectionHeader'
 
 interface FoodEntryFormProps {
   selectedDate: string
@@ -11,6 +17,7 @@ interface FoodEntryFormProps {
 }
 
 const mealTypes: MealType[] = ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK']
+const controlClassName = 'min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70'
 
 function emptyFormValues() {
   return {
@@ -129,159 +136,74 @@ export default function FoodEntryForm({
   }
 
   return (
-    <form className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm" onSubmit={handleSubmit}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h4 className="text-base font-semibold text-gray-900">
-            {isEditing ? 'Edit food entry' : 'Add food entry'}
-          </h4>
-          <p className="mt-1 text-sm text-gray-500">
-            {isEditing ? `Update the entry for ${selectedDate}.` : `Record food for ${selectedDate}.`}
-          </p>
-        </div>
-        {isEditing && (
-          <button
-            className="text-sm font-medium text-gray-600 underline disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={mutating}
-            onClick={onCancelEdit}
-            type="button"
-          >
-            Cancel
-          </button>
-        )}
-      </div>
-
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm font-medium text-gray-700">
-          Meal
-          <select
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            disabled={mutating}
-            value={formValues.mealType}
-            onChange={(event) => updateField('mealType', event.target.value)}
-          >
-            {mealTypes.map((mealType) => (
-              <option key={mealType} value={mealType}>
-                {mealType.charAt(0) + mealType.slice(1).toLowerCase()}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm font-medium text-gray-700">
-          Food name
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            disabled={mutating}
-            maxLength={150}
-            type="text"
-            value={formValues.foodName}
-            onChange={(event) => updateField('foodName', event.target.value)}
-          />
-        </label>
-      </div>
-
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm font-medium text-gray-700">
-          Quantity
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            disabled={mutating}
-            inputMode="decimal"
-            min="0.01"
-            step="0.01"
-            type="number"
-            value={formValues.quantity}
-            onChange={(event) => updateField('quantity', event.target.value)}
-          />
-        </label>
-        <label className="block text-sm font-medium text-gray-700">
-          Unit
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            disabled={mutating}
-            maxLength={50}
-            type="text"
-            value={formValues.unit}
-            onChange={(event) => updateField('unit', event.target.value)}
-          />
-        </label>
-      </div>
-
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="block text-sm font-medium text-gray-700">
-          Calories
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            disabled={mutating}
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            type="number"
-            value={formValues.calories}
-            onChange={(event) => updateField('calories', event.target.value)}
-          />
-        </label>
-        <label className="block text-sm font-medium text-gray-700">
-          Protein (g)
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            disabled={mutating}
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            type="number"
-            value={formValues.proteinGrams}
-            onChange={(event) => updateField('proteinGrams', event.target.value)}
-          />
-        </label>
-        <label className="block text-sm font-medium text-gray-700">
-          Carbohydrates (g)
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            disabled={mutating}
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            type="number"
-            value={formValues.carbohydrateGrams}
-            onChange={(event) => updateField('carbohydrateGrams', event.target.value)}
-          />
-        </label>
-        <label className="block text-sm font-medium text-gray-700">
-          Fat (g)
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            disabled={mutating}
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            type="number"
-            value={formValues.fatGrams}
-            onChange={(event) => updateField('fatGrams', event.target.value)}
-          />
-        </label>
-      </div>
-
-      <label className="mt-4 block text-sm font-medium text-gray-700">
-        Notes <span className="font-normal text-gray-400">(optional)</span>
-        <textarea
-          className="mt-1 min-h-20 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-          disabled={mutating}
-          maxLength={500}
-          value={formValues.notes}
-          onChange={(event) => updateField('notes', event.target.value)}
+    <Card as="section" padding="normal" aria-labelledby="food-entry-form-heading">
+      <form aria-describedby={error ? 'food-entry-form-error' : undefined} onSubmit={handleSubmit}>
+        <SectionHeader
+          headingId="food-entry-form-heading"
+          headingLevel={3}
+          title={isEditing ? 'Edit food entry' : 'Add food entry'}
+          description={`${isEditing ? 'Update' : 'Record'} food for ${formatLocalDate(selectedDate)}.`}
+          actions={isEditing ? (
+            <Button variant="secondary" disabled={mutating} onClick={onCancelEdit}>
+              Cancel edit
+            </Button>
+          ) : undefined}
         />
-      </label>
 
-      {error && <p className="mt-3 text-sm font-medium text-red-700">{error}</p>}
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <Field label="Meal" required>
+            {(controlProps) => (
+              <select {...controlProps} className={controlClassName} disabled={mutating} value={formValues.mealType} onChange={(event) => updateField('mealType', event.target.value)}>
+                {mealTypes.map((mealType) => (
+                  <option key={mealType} value={mealType}>{mealType.charAt(0) + mealType.slice(1).toLowerCase()}</option>
+                ))}
+              </select>
+            )}
+          </Field>
+          <Field label="Food name" required>
+            {(controlProps) => (
+              <input {...controlProps} className={controlClassName} disabled={mutating} maxLength={150} type="text" value={formValues.foodName} onChange={(event) => updateField('foodName', event.target.value)} />
+            )}
+          </Field>
+          <Field label="Quantity" required hint="Enter an amount greater than zero.">
+            {(controlProps) => (
+              <input {...controlProps} className={controlClassName} disabled={mutating} inputMode="decimal" min="0.01" step="0.01" type="number" value={formValues.quantity} onChange={(event) => updateField('quantity', event.target.value)} />
+            )}
+          </Field>
+          <Field label="Unit" required hint="For example: serving, bowl, g or ml.">
+            {(controlProps) => (
+              <input {...controlProps} className={controlClassName} disabled={mutating} maxLength={50} type="text" value={formValues.unit} onChange={(event) => updateField('unit', event.target.value)} />
+            )}
+          </Field>
+        </div>
 
-      <button
-        className="mt-4 w-full rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={mutating}
-        type="submit"
-      >
-        {mutating ? 'Saving...' : isEditing ? 'Update food entry' : 'Add food entry'}
-      </button>
-    </form>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {([
+            ['Calories', 'calories'],
+            ['Protein (g)', 'proteinGrams'],
+            ['Carbohydrates (g)', 'carbohydrateGrams'],
+            ['Fat (g)', 'fatGrams'],
+          ] as const).map(([label, field]) => (
+            <Field key={field} label={label} required hint="Zero or greater.">
+              {(controlProps) => (
+                <input {...controlProps} className={controlClassName} disabled={mutating} inputMode="decimal" min="0" step="0.01" type="number" value={formValues[field]} onChange={(event) => updateField(field, event.target.value)} />
+              )}
+            </Field>
+          ))}
+        </div>
+
+        <Field className="mt-4" label="Notes" optional hint="Up to 500 characters.">
+          {(controlProps) => (
+            <textarea {...controlProps} className={`${controlClassName} min-h-24 resize-y`} disabled={mutating} maxLength={500} value={formValues.notes} onChange={(event) => updateField('notes', event.target.value)} />
+          )}
+        </Field>
+
+        {error ? <Alert id="food-entry-form-error" className="mt-4" tone="error" title="Check the food entry">{error}</Alert> : null}
+
+        <Button className="mt-5" disabled={mutating} fullWidth type="submit">
+          {mutating ? 'Saving food entry...' : isEditing ? 'Update food entry' : 'Add food entry'}
+        </Button>
+      </form>
+    </Card>
   )
 }

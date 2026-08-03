@@ -5,6 +5,14 @@ import { CHALLENGE_STATUS_LABELS } from '../types/CoupleChallenge'
 import AchievementBadge from './AchievementBadge'
 import CoupleChallengeCard from './CoupleChallengeCard'
 import CoupleChallengeForm from './CoupleChallengeForm'
+import { Alert } from './ui/Alert'
+import { Button } from './ui/Button'
+import { Card } from './ui/Card'
+import { ConfirmDialog } from './ui/ConfirmDialog'
+import { EmptyState } from './ui/EmptyState'
+import { LoadingState } from './ui/LoadingState'
+import { SectionHeader } from './ui/SectionHeader'
+import { StatusBadge } from './ui/StatusBadge'
 
 interface CoupleChallengesPanelProps {
   participantUserProfileIds: readonly number[]
@@ -26,6 +34,7 @@ export default function CoupleChallengesPanel({ participantUserProfileIds }: Cou
   const challengeState = useCoupleChallenges(participantUserProfileIds)
   const [showForm, setShowForm] = useState(false)
   const [editingChallenge, setEditingChallenge] = useState<CoupleChallenge | null>(null)
+  const [pendingDeleteChallenge, setPendingDeleteChallenge] = useState<Pick<CoupleChallenge, 'id' | 'title'> | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
@@ -49,12 +58,13 @@ export default function CoupleChallengesPanel({ participantUserProfileIds }: Cou
   async function saveChallenge(data: CoupleChallengeRequest): Promise<CoupleChallenge> {
     setActionError(null)
     setSuccessMessage(null)
-    const saved = editingChallenge
+    const updating = editingChallenge !== null
+    const saved = updating
       ? await challengeState.updateChallenge(editingChallenge.id, data)
       : await challengeState.createChallenge(data)
     setShowForm(false)
     setEditingChallenge(null)
-    setSuccessMessage(editingChallenge ? 'Couple challenge updated.' : 'Couple challenge created.')
+    setSuccessMessage(updating ? 'Couple challenge updated.' : 'Couple challenge created.')
     return saved
   }
 
@@ -70,14 +80,28 @@ export default function CoupleChallengesPanel({ participantUserProfileIds }: Cou
   }
 
   async function removeChallenge(challengeId: number) {
-    if (!window.confirm('Delete this couple challenge? This action cannot be undone.')) return
+    setActionError(null)
+    setSuccessMessage(null)
+    const challenge = challengeState.challenges.find((candidate) => candidate.id === challengeId)
+    setPendingDeleteChallenge({ id: challengeId, title: challenge?.title ?? 'this challenge' })
+  }
+
+  async function confirmRemoveChallenge() {
+    if (pendingDeleteChallenge === null) return
+    const challengeId = pendingDeleteChallenge.id
     setActionError(null)
     setSuccessMessage(null)
     try {
       await challengeState.deleteChallenge(challengeId)
+      if (editingChallenge?.id === challengeId) {
+        setEditingChallenge(null)
+        setShowForm(false)
+      }
       setSuccessMessage('Couple challenge deleted.')
     } catch (error) {
       setActionError(messageFrom(error, 'Failed to delete couple challenge.'))
+    } finally {
+      setPendingDeleteChallenge(null)
     }
   }
 
@@ -114,26 +138,37 @@ export default function CoupleChallengesPanel({ participantUserProfileIds }: Cou
   const initialLoading = challengeState.loading && challengeState.challenges.length === 0
 
   return (
-    <section className="space-y-4 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 shadow-sm sm:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Couple Challenges</h3>
-          <p className="mt-1 text-sm text-gray-600">Shared progress for Husband and Wife</p>
-        </div>
-        <button className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60" disabled={!canCreate || challengeState.mutating} type="button" onClick={beginCreate}>
-          Add challenge
-        </button>
-      </div>
+    <Card as="section" padding="normal" className="min-w-0 space-y-5" aria-labelledby="shared-couple-challenges-heading">
+      <SectionHeader
+        headingId="shared-couple-challenges-heading"
+        headingLevel={2}
+        title="Shared couple challenges"
+        description="Shared progress for Husband and Wife, independent of the active personal-goal profile."
+        actions={(
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge tone="information">Shared by both profiles</StatusBadge>
+            <Button disabled={!canCreate || challengeState.mutating} onClick={beginCreate}>
+              Add challenge
+            </Button>
+          </div>
+        )}
+      />
 
-      <div className="flex flex-wrap gap-2" aria-label="Couple challenge status filter">
+      {!canCreate ? (
+        <Alert tone="warning" title="Two profiles required">
+          Couple challenges require two distinct loaded profiles.
+        </Alert>
+      ) : null}
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Couple challenge status filter">
         {filters.map((filter) => {
           const selected = challengeState.statusFilter === filter.value
           return (
-            <button
+            <Button
               key={filter.label}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium ${selected ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 ring-1 ring-indigo-100'}`}
-              disabled={challengeState.loading}
-              type="button"
+              variant={selected ? 'primary' : 'secondary'}
+              aria-pressed={selected}
+              disabled={challengeState.loading || challengeState.mutating}
               onClick={() => {
                 setShowForm(false)
                 setEditingChallenge(null)
@@ -141,12 +176,12 @@ export default function CoupleChallengesPanel({ participantUserProfileIds }: Cou
               }}
             >
               {filter.label}
-            </button>
+            </Button>
           )
         })}
       </div>
 
-      {showForm && (
+      {showForm ? (
         <CoupleChallengeForm
           editingChallenge={editingChallenge}
           mutating={challengeState.mutating}
@@ -154,23 +189,29 @@ export default function CoupleChallengesPanel({ participantUserProfileIds }: Cou
           onCancel={() => { setShowForm(false); setEditingChallenge(null) }}
           onSubmit={saveChallenge}
         />
-      )}
+      ) : null}
 
-      {challengeState.refreshing && <p className="text-sm text-gray-500">Refreshing couple challenges...</p>}
-      {(actionError || challengeState.error) && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3" role="alert">
-          <p className="text-sm font-medium text-red-700">{actionError ?? challengeState.error}</p>
-          <button className="mt-2 text-sm font-semibold text-red-700 underline" type="button" onClick={challengeState.reload}>Retry</button>
-        </div>
-      )}
-      {successMessage && <p className="rounded-xl bg-green-50 p-3 text-sm font-medium text-green-700" role="status">{successMessage}</p>}
+      {challengeState.refreshing ? <LoadingState compact message="Refreshing shared challenges..." /> : null}
+      {actionError || challengeState.error ? (
+        <Alert
+          tone="error"
+          title="Unable to update shared challenges"
+          action={<Button variant="secondary" size="compact" disabled={challengeState.mutating} onClick={challengeState.reload}>Retry</Button>}
+        >
+          {actionError ?? challengeState.error}
+        </Alert>
+      ) : null}
+      {successMessage ? <Alert tone="success">{successMessage}</Alert> : null}
 
       {initialLoading ? (
-        <p className="rounded-xl bg-white p-4 text-sm text-gray-500">Loading couple challenges...</p>
+        <LoadingState message="Loading shared couple challenges..." />
       ) : challengeState.challenges.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-indigo-200 bg-white p-5 text-center text-sm text-gray-500">No couple challenges match this filter.</p>
+        <EmptyState
+          title="No shared challenges match this filter"
+          description="Choose another status or create a challenge for both profiles."
+        />
       ) : (
-        <div className="space-y-3">
+        <div className="grid min-w-0 gap-4">
           {challengeState.challenges.map((challenge) => (
             <CoupleChallengeCard
               key={challenge.id}
@@ -186,16 +227,34 @@ export default function CoupleChallengesPanel({ participantUserProfileIds }: Cou
         </div>
       )}
 
-      {achievements.length > 0 && (
-        <div>
-          <h4 className="mb-2 text-sm font-semibold text-gray-800">Couple achievements</h4>
-          <div className="grid gap-2 sm:grid-cols-2">
+      {achievements.length > 0 ? (
+        <section className="min-w-0 space-y-3" aria-labelledby="couple-achievements-heading">
+          <SectionHeader
+            headingId="couple-achievements-heading"
+            headingLevel={3}
+            title="Couple achievements"
+            description="Achievements earned through shared challenges."
+          />
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2">
             {achievements.map((achievement) => (
               <AchievementBadge key={`${achievement.achievementType}-${achievement.challengeId ?? 'none'}`} achievement={achievement} />
             ))}
           </div>
-        </div>
-      )}
-    </section>
+        </section>
+      ) : null}
+
+      <ConfirmDialog
+        open={pendingDeleteChallenge !== null}
+        title="Delete shared challenge?"
+        description={pendingDeleteChallenge
+          ? `“${pendingDeleteChallenge.title}” and its participant check-ins will be permanently removed. This action cannot be undone.`
+          : ''}
+        confirmLabel="Delete challenge"
+        confirmingLabel="Deleting challenge..."
+        confirming={challengeState.mutating}
+        onCancel={() => setPendingDeleteChallenge(null)}
+        onConfirm={() => { void confirmRemoveChallenge() }}
+      />
+    </Card>
   )
 }

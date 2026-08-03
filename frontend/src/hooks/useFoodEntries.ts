@@ -24,7 +24,11 @@ interface UseFoodEntriesResult {
 }
 
 function getInitialSelectedDate(): string {
-  return new Date().toISOString().slice(0, 10)
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function getErrorMessage(error: unknown, fallbackMessage: string): string {
@@ -73,8 +77,6 @@ export function useFoodEntries(userProfileId: number | null): UseFoodEntriesResu
       } catch (err) {
         if (!cancelled) {
           setError(getErrorMessage(err, 'Failed to load food entries'))
-          setEntries([])
-          setSummary(null)
         }
       } finally {
         if (!cancelled) {

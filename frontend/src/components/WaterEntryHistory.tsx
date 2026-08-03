@@ -1,4 +1,9 @@
 import type { WaterEntry } from '../types/WaterTracking'
+import { formatLocalDateTime } from '../utils/dateFormatting'
+import { Button } from './ui/Button'
+import { Card } from './ui/Card'
+import { EmptyState } from './ui/EmptyState'
+import { SectionHeader } from './ui/SectionHeader'
 
 interface WaterEntryHistoryProps {
   entries: WaterEntry[]
@@ -9,61 +14,56 @@ interface WaterEntryHistoryProps {
 
 function formatAmount(amountMl: number): string {
   const millilitres = `${amountMl.toLocaleString(undefined, { maximumFractionDigits: 0 })} ml`
-  if (amountMl < 1000) {
-    return millilitres
-  }
+  if (amountMl < 1000) return millilitres
   return `${millilitres} (${(amountMl / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })} L)`
-}
-
-function formatCreatedTime(createdAt: string): string {
-  const parsedDate = new Date(createdAt)
-  return Number.isNaN(parsedDate.getTime())
-    ? 'Time not available'
-    : new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(parsedDate)
 }
 
 export default function WaterEntryHistory({ entries, mutating, onEdit, onDelete }: WaterEntryHistoryProps) {
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-      <h4 className="text-base font-semibold text-gray-900">Water history</h4>
+    <Card as="section" padding="normal" aria-labelledby="water-history-heading">
+      <SectionHeader
+        headingId="water-history-heading"
+        headingLevel={3}
+        title="Water history"
+        description="Entries are shown in the order they were recorded."
+      />
 
       {entries.length === 0 ? (
-        <p className="mt-3 text-sm text-gray-500">No water entries for this date.</p>
+        <EmptyState
+          className="mt-5"
+          compact
+          title="No water logged"
+          description="No water entries were recorded for this date."
+        />
       ) : (
-        <div className="mt-4 space-y-2">
+        <div className="mt-5 space-y-3">
           {entries.map((entry) => (
-            <article key={entry.id} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+            <article key={entry.id} className="min-w-0 rounded-xl border border-app-border bg-slate-50 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="font-semibold text-gray-900">{formatAmount(entry.amountMl)}</p>
-                  <p className="mt-1 text-sm text-gray-600">Added at {formatCreatedTime(entry.createdAt)}</p>
+                <div className="min-w-0">
+                  <p className="break-words font-semibold text-app-primary">{formatAmount(entry.amountMl)}</p>
+                  <p className="mt-1 text-sm text-app-secondary">Added {formatLocalDateTime(entry.createdAt)}</p>
                 </div>
-                <div className="flex gap-3 text-sm font-medium">
-                  <button
-                    className="text-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={mutating}
-                    type="button"
-                    onClick={() => onEdit(entry)}
-                  >
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="secondary" disabled={mutating} onClick={() => onEdit(entry)}>
                     Edit
-                  </button>
-                  <button
-                    className="text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  </Button>
+                  <Button
+                    variant="destructive"
                     disabled={mutating}
-                    type="button"
-                    onClick={() => {
-                      void onDelete(entry.id)
-                    }}
+                    onClick={() => { void onDelete(entry.id) }}
                   >
                     Delete
-                  </button>
+                  </Button>
                 </div>
               </div>
-              {entry.notes && <p className="mt-3 text-sm text-gray-500">{entry.notes}</p>}
+              {entry.notes ? (
+                <p className="mt-3 whitespace-pre-wrap break-words text-sm text-app-secondary">{entry.notes}</p>
+              ) : null}
             </article>
           ))}
         </div>
       )}
-    </section>
+    </Card>
   )
 }

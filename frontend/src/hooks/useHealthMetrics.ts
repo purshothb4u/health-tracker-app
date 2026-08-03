@@ -54,8 +54,6 @@ export function useHealthMetrics(userProfileId: number | null): UseHealthMetrics
               ? err.message
               : 'Failed to load health metrics'
           setError(message)
-          setMetrics([])
-          setSummary(null)
         }
       } finally {
         if (!cancelled) {

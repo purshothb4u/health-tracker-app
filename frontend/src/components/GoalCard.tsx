@@ -1,7 +1,12 @@
 import type { Goal, GoalProgress, GoalStatus } from '../types/Goal'
 import { GOAL_STATUS_LABELS, GOAL_TYPE_LABELS } from '../types/Goal'
+import { formatLocalDate } from '../utils/dateFormatting'
 import GoalCheckInControl from './GoalCheckInControl'
 import GoalProgressCard from './GoalProgressCard'
+import { Button } from './ui/Button'
+import { Card } from './ui/Card'
+import { LoadingState } from './ui/LoadingState'
+import { StatusBadge, type StatusBadgeTone } from './ui/StatusBadge'
 
 interface GoalCardProps {
   goal: Goal
@@ -13,35 +18,68 @@ interface GoalCardProps {
   onCheckIn: (goalId: number, date: string, completed: boolean, notes: string | null) => Promise<unknown>
 }
 
+function statusTone(status: GoalStatus): StatusBadgeTone {
+  if (status === 'ACTIVE') return 'information'
+  if (status === 'COMPLETED') return 'success'
+  return 'neutral'
+}
+
 export default function GoalCard({ goal, progress, mutating, onEdit, onStatus, onDelete, onCheckIn }: GoalCardProps) {
   const active = goal.status === 'ACTIVE'
-  const buttonClass = 'rounded-lg border px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60'
 
   return (
-    <article className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <Card as="article" padding="normal" className="min-w-0 space-y-5">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h4 className="font-semibold text-gray-900">{goal.title}</h4>
-          <p className="mt-1 text-xs text-gray-500">{GOAL_TYPE_LABELS[goal.goalType]} · {goal.startDate} to {goal.endDate}</p>
+          <h3 className="break-words text-lg font-semibold text-app-primary">{goal.title}</h3>
+          <p className="mt-1 break-words text-sm leading-6 text-app-secondary">
+            {GOAL_TYPE_LABELS[goal.goalType]} &middot; {formatLocalDate(goal.startDate)} to {formatLocalDate(goal.endDate)}
+          </p>
         </div>
-        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">{GOAL_STATUS_LABELS[goal.status]}</span>
+        <StatusBadge tone={statusTone(goal.status)}>{GOAL_STATUS_LABELS[goal.status]}</StatusBadge>
       </div>
-      {goal.notes && <p className="text-sm text-gray-600">{goal.notes}</p>}
-      {progress ? <GoalProgressCard progress={progress} /> : <p className="text-sm text-gray-500">Loading progress...</p>}
-      {active && goal.goalType === 'CUSTOM_CHECK_IN' && (
+
+      {goal.notes ? (
+        <p className="whitespace-pre-wrap break-words text-sm leading-6 text-app-secondary">
+          {goal.notes}
+        </p>
+      ) : null}
+
+      {progress ? (
+        <GoalProgressCard progress={progress} />
+      ) : (
+        <LoadingState compact message={`Loading progress for ${goal.title}...`} />
+      )}
+
+      {active && goal.goalType === 'CUSTOM_CHECK_IN' ? (
         <GoalCheckInControl
           endDate={goal.endDate}
           mutating={mutating}
           startDate={goal.startDate}
           onSubmit={(date, data) => onCheckIn(goal.id, date, data.completed, data.notes ?? null)}
         />
-      )}
-      <div className="flex flex-wrap gap-2">
-        {active && <button className={`${buttonClass} border-gray-300 text-gray-700`} disabled={mutating} type="button" onClick={() => onEdit(goal)}>Edit</button>}
-        {active && <button className={`${buttonClass} border-green-300 text-green-700`} disabled={mutating} type="button" onClick={() => void onStatus(goal.id, 'COMPLETED')}>Complete</button>}
-        {active && <button className={`${buttonClass} border-amber-300 text-amber-700`} disabled={mutating} type="button" onClick={() => void onStatus(goal.id, 'CANCELLED')}>Cancel</button>}
-        <button className={`${buttonClass} border-red-300 text-red-700`} disabled={mutating} type="button" onClick={() => void onDelete(goal.id)}>Delete</button>
+      ) : null}
+
+      <div className="flex flex-col gap-2 border-t border-app-border pt-4 sm:flex-row sm:flex-wrap" aria-label={`Actions for ${goal.title}`}>
+        {active ? (
+          <Button variant="secondary" disabled={mutating} aria-label={`Edit ${goal.title}`} onClick={() => onEdit(goal)}>
+            Edit
+          </Button>
+        ) : null}
+        {active ? (
+          <Button disabled={mutating} aria-label={`Complete ${goal.title}`} onClick={() => void onStatus(goal.id, 'COMPLETED')}>
+            Complete goal
+          </Button>
+        ) : null}
+        {active ? (
+          <Button variant="secondary" disabled={mutating} aria-label={`Cancel ${goal.title}`} onClick={() => void onStatus(goal.id, 'CANCELLED')}>
+            Cancel goal
+          </Button>
+        ) : null}
+        <Button variant="destructive" disabled={mutating} aria-label={`Delete ${goal.title}`} onClick={() => void onDelete(goal.id)}>
+          Delete goal
+        </Button>
       </div>
-    </article>
+    </Card>
   )
 }

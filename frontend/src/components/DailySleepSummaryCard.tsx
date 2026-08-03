@@ -1,20 +1,10 @@
 import type { DailySleepSummary } from '../types/SleepTracking'
+import { formatDurationMinutes, formatLocalDate } from '../utils/dateFormatting'
+import { Card } from './ui/Card'
+import { SectionHeader } from './ui/SectionHeader'
 
 interface DailySleepSummaryCardProps {
   summary: DailySleepSummary
-}
-
-function formatDuration(totalMinutes: number): string {
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-
-  if (hours === 0) {
-    return `${minutes} min`
-  }
-  if (minutes === 0) {
-    return `${hours} hr`
-  }
-  return `${hours} hr ${minutes} min`
 }
 
 function formatAverageQuality(averageQuality: number | null): string {
@@ -25,45 +15,47 @@ function formatAverageQuality(averageQuality: number | null): string {
 
 export default function DailySleepSummaryCard({ summary }: DailySleepSummaryCardProps) {
   return (
-    <section className="rounded-2xl border border-primary-100 bg-primary-50 p-5">
-      <div>
-        <h4 className="text-base font-semibold text-gray-900">Daily sleep summary</h4>
-        <p className="mt-1 text-sm text-gray-600">Recorded totals for the selected date</p>
-      </div>
+    <Card as="section" padding="normal" aria-labelledby={`sleep-summary-heading-${summary.userProfileId}`}>
+      <SectionHeader
+        headingId={`sleep-summary-heading-${summary.userProfileId}`}
+        headingLevel={3}
+        title="Daily sleep summary"
+        description={`Backend-calculated totals for sessions ending on ${formatLocalDate(summary.sleepDate)}.`}
+      />
 
-      <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-        <div className="rounded-xl bg-white p-3">
-          <dt className="text-gray-500">Sessions</dt>
-          <dd className="mt-1 text-lg font-bold text-gray-900">
+      <dl className="mt-5 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
+        <div className="rounded-xl bg-primary-50 p-4">
+          <dt className="text-app-secondary">Sessions</dt>
+          <dd className="mt-1 break-words text-lg font-bold text-app-primary">
             {summary.sessionCount.toLocaleString()}
           </dd>
         </div>
-        <div className="rounded-xl bg-white p-3">
-          <dt className="text-gray-500">Total sleep</dt>
-          <dd className="mt-1 text-lg font-bold text-gray-900">
-            {formatDuration(summary.totalSleepMinutes)}
+        <div className="rounded-xl bg-slate-50 p-4">
+          <dt className="text-app-secondary">Total sleep</dt>
+          <dd className="mt-1 break-words text-lg font-bold text-app-primary">
+            {formatDurationMinutes(summary.totalSleepMinutes)}
           </dd>
         </div>
-        <div className="rounded-xl bg-white p-3">
-          <dt className="text-gray-500">Night sleep</dt>
-          <dd className="mt-1 text-lg font-bold text-gray-900">
-            {formatDuration(summary.nightSleepMinutes)}
+        <div className="rounded-xl bg-slate-50 p-4">
+          <dt className="text-app-secondary">Night sleep</dt>
+          <dd className="mt-1 break-words text-lg font-bold text-app-primary">
+            {formatDurationMinutes(summary.nightSleepMinutes)}
           </dd>
         </div>
-        <div className="rounded-xl bg-white p-3">
-          <dt className="text-gray-500">Nap duration</dt>
-          <dd className="mt-1 text-lg font-bold text-gray-900">
-            {formatDuration(summary.napMinutes)}
+        <div className="rounded-xl bg-slate-50 p-4">
+          <dt className="text-app-secondary">Nap duration</dt>
+          <dd className="mt-1 break-words text-lg font-bold text-app-primary">
+            {formatDurationMinutes(summary.napMinutes)}
           </dd>
         </div>
-        <div className="rounded-xl bg-white p-3 sm:col-span-2">
-          <dt className="text-gray-500">Average quality</dt>
-          <dd className="mt-1 text-lg font-bold text-gray-900">
+        <div className="rounded-xl bg-slate-50 p-4 sm:col-span-2">
+          <dt className="text-app-secondary">Average quality</dt>
+          <dd className="mt-1 break-words text-lg font-bold text-app-primary">
             {formatAverageQuality(summary.averageQuality)}
           </dd>
-          <p className="mt-1 text-xs text-gray-500">Average of rated sessions only.</p>
+          <p className="mt-1 text-xs text-app-secondary">Average of rated sessions only; unrated sessions are excluded.</p>
         </div>
       </dl>
-    </section>
+    </Card>
   )
 }

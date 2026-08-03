@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { ChallengeType, CoupleChallenge, CoupleChallengeRequest } from '../types/CoupleChallenge'
 import { CHALLENGE_TYPE_LABELS } from '../types/CoupleChallenge'
+import { Alert } from './ui/Alert'
+import { Button } from './ui/Button'
+import { Card } from './ui/Card'
+import { Field } from './ui/Field'
+import { SectionHeader } from './ui/SectionHeader'
 
 interface CoupleChallengeFormProps {
   editingChallenge: CoupleChallenge | null
@@ -95,61 +100,82 @@ export default function CoupleChallengeForm({
     }
   }
 
-  const inputClass = 'mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900'
+  const inputClass = 'min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-app-secondary'
 
   return (
-    <form className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm" onSubmit={handleSubmit}>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <h4 className="font-semibold text-gray-900">{editingChallenge ? 'Edit couple challenge' : 'Create couple challenge'}</h4>
-          <p className="mt-1 text-xs text-gray-500">Husband and Wife participate automatically.</p>
+    <Card padding="normal" className="min-w-0 border-information-border bg-information-surface/30">
+      <SectionHeader
+        headingId="couple-challenge-form-heading"
+        headingLevel={3}
+        title={editingChallenge ? 'Edit shared challenge' : 'Create shared challenge'}
+        description={editingChallenge
+          ? 'Challenge type and participant membership remain fixed while editing.'
+          : 'Both loaded profiles participate automatically.'}
+        actions={(
+          <Button variant="secondary" disabled={mutating} onClick={onCancel}>
+            {editingChallenge ? 'Cancel edit' : 'Cancel'}
+          </Button>
+        )}
+      />
+      <form
+        className="mt-5 space-y-5"
+        aria-describedby={formError ? 'couple-challenge-form-error' : undefined}
+        aria-labelledby="couple-challenge-form-heading"
+        onSubmit={handleSubmit}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field className="sm:col-span-2" label="Title" required hint="Use a clear title up to 100 characters.">
+            {(controlProps) => (
+              <input {...controlProps} className={inputClass} disabled={mutating} maxLength={100} value={title} onChange={(event) => setTitle(event.target.value)} />
+            )}
+          </Field>
+          <Field label="Challenge type" required hint={editingChallenge ? 'Challenge type cannot be changed after creation.' : undefined}>
+            {(controlProps) => (
+              <select {...controlProps} className={inputClass} disabled={mutating || editingChallenge !== null} value={challengeType} onChange={(event) => setChallengeType(event.target.value as ChallengeType)}>
+                {Object.entries(CHALLENGE_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            )}
+          </Field>
+          <Field label="Target value" required hint="Enter a positive whole number.">
+            {(controlProps) => (
+              <input {...controlProps} className={inputClass} disabled={mutating} min="1" step="1" type="number" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} />
+            )}
+          </Field>
+          <Field label="Start date" required>
+            {(controlProps) => (
+              <input {...controlProps} className={inputClass} disabled={mutating} type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+            )}
+          </Field>
+          <Field label="End date" required hint="The end date must be on or after the start date.">
+            {(controlProps) => (
+              <input {...controlProps} className={inputClass} disabled={mutating} min={startDate} type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+            )}
+          </Field>
+          {challengeType === 'SLEEP_TARGET_DAYS' ? (
+            <Field label="Qualifying sleep minutes" required hint="Enter a whole number from 1 to 1,440.">
+              {(controlProps) => (
+                <input {...controlProps} className={inputClass} disabled={mutating} max="1440" min="1" step="1" type="number" value={sleepMinutes} onChange={(event) => setSleepMinutes(event.target.value)} />
+              )}
+            </Field>
+          ) : null}
+          {challengeType === 'CUSTOM_CHECK_IN' ? (
+            <Field label="Custom unit" optional hint="Up to 30 characters.">
+              {(controlProps) => (
+                <input {...controlProps} className={inputClass} disabled={mutating} maxLength={30} value={customUnit} onChange={(event) => setCustomUnit(event.target.value)} />
+              )}
+            </Field>
+          ) : null}
+          <Field className="sm:col-span-2" label="Notes" optional hint="Up to 500 characters.">
+            {(controlProps) => (
+              <textarea {...controlProps} className={inputClass} disabled={mutating} maxLength={500} rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} />
+            )}
+          </Field>
         </div>
-        <button className="text-sm font-medium text-gray-600 hover:text-gray-900" type="button" onClick={onCancel}>Close</button>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-medium text-gray-700 sm:col-span-2">
-          Title
-          <input className={inputClass} disabled={mutating} maxLength={100} required value={title} onChange={(event) => setTitle(event.target.value)} />
-        </label>
-        <label className="text-sm font-medium text-gray-700">
-          Challenge type
-          <select className={inputClass} disabled={mutating || editingChallenge !== null} value={challengeType} onChange={(event) => setChallengeType(event.target.value as ChallengeType)}>
-            {Object.entries(CHALLENGE_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-        </label>
-        <label className="text-sm font-medium text-gray-700">
-          Target value
-          <input className={inputClass} disabled={mutating} min="1" required step="1" type="number" value={targetValue} onChange={(event) => setTargetValue(event.target.value)} />
-        </label>
-        <label className="text-sm font-medium text-gray-700">
-          Start date
-          <input className={inputClass} disabled={mutating} required type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
-        </label>
-        <label className="text-sm font-medium text-gray-700">
-          End date
-          <input className={inputClass} disabled={mutating} min={startDate} required type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
-        </label>
-        {challengeType === 'SLEEP_TARGET_DAYS' && (
-          <label className="text-sm font-medium text-gray-700">
-            Sleep target minutes
-            <input className={inputClass} disabled={mutating} max="1440" min="1" required step="1" type="number" value={sleepMinutes} onChange={(event) => setSleepMinutes(event.target.value)} />
-          </label>
-        )}
-        {challengeType === 'CUSTOM_CHECK_IN' && (
-          <label className="text-sm font-medium text-gray-700">
-            Custom unit (optional)
-            <input className={inputClass} disabled={mutating} maxLength={30} value={customUnit} onChange={(event) => setCustomUnit(event.target.value)} />
-          </label>
-        )}
-        <label className="text-sm font-medium text-gray-700 sm:col-span-2">
-          Notes (optional)
-          <textarea className={inputClass} disabled={mutating} maxLength={500} rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} />
-        </label>
-      </div>
-      {formError && <p className="mt-3 text-sm font-medium text-red-700" role="alert">{formError}</p>}
-      <button className="mt-4 w-full rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60 sm:w-auto" disabled={mutating} type="submit">
-        {editingChallenge ? 'Save changes' : 'Create challenge'}
-      </button>
-    </form>
+        {formError ? <Alert id="couple-challenge-form-error" tone="error" title="Unable to save challenge">{formError}</Alert> : null}
+        <Button className="w-full sm:w-auto" disabled={mutating} type="submit">
+          {mutating ? 'Saving challenge...' : editingChallenge ? 'Save challenge changes' : 'Create challenge'}
+        </Button>
+      </form>
+    </Card>
   )
 }

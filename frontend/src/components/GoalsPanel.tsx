@@ -5,6 +5,14 @@ import { GOAL_STATUS_LABELS } from '../types/Goal'
 import AchievementBadge from './AchievementBadge'
 import GoalCard from './GoalCard'
 import GoalForm from './GoalForm'
+import { Alert } from './ui/Alert'
+import { Button } from './ui/Button'
+import { Card } from './ui/Card'
+import { ConfirmDialog } from './ui/ConfirmDialog'
+import { EmptyState } from './ui/EmptyState'
+import { LoadingState } from './ui/LoadingState'
+import { SectionHeader } from './ui/SectionHeader'
+import { StatusBadge } from './ui/StatusBadge'
 
 interface GoalsPanelProps {
   userProfileId: number
@@ -27,8 +35,10 @@ export default function GoalsPanel({ userProfileId, profileName }: GoalsPanelPro
   const goalsState = useGoals(userProfileId)
   const [showForm, setShowForm] = useState(false)
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
+  const [pendingDeleteGoal, setPendingDeleteGoal] = useState<Pick<Goal, 'id' | 'title'> | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const headingId = `personal-goals-heading-${userProfileId}`
 
   function beginCreate() {
     setEditingGoal(null)
@@ -47,12 +57,13 @@ export default function GoalsPanel({ userProfileId, profileName }: GoalsPanelPro
   async function saveGoal(data: GoalRequest): Promise<Goal> {
     setActionError(null)
     setSuccessMessage(null)
-    const saved = editingGoal
+    const updating = editingGoal !== null
+    const saved = updating
       ? await goalsState.updateGoal(editingGoal.id, data)
       : await goalsState.createGoal(data)
     setShowForm(false)
     setEditingGoal(null)
-    setSuccessMessage(editingGoal ? 'Goal updated.' : 'Goal created.')
+    setSuccessMessage(updating ? 'Goal updated.' : 'Goal created.')
     return saved
   }
 
@@ -68,14 +79,28 @@ export default function GoalsPanel({ userProfileId, profileName }: GoalsPanelPro
   }
 
   async function removeGoal(goalId: number) {
-    if (!window.confirm('Delete this goal? This action cannot be undone.')) return
+    setActionError(null)
+    setSuccessMessage(null)
+    const goal = goalsState.goals.find((candidate) => candidate.id === goalId)
+    setPendingDeleteGoal({ id: goalId, title: goal?.title ?? 'this goal' })
+  }
+
+  async function confirmRemoveGoal() {
+    if (pendingDeleteGoal === null) return
+    const goalId = pendingDeleteGoal.id
     setActionError(null)
     setSuccessMessage(null)
     try {
       await goalsState.deleteGoal(goalId)
+      if (editingGoal?.id === goalId) {
+        setEditingGoal(null)
+        setShowForm(false)
+      }
       setSuccessMessage('Goal deleted.')
     } catch (error) {
       setActionError(messageFrom(error, 'Failed to delete goal.'))
+    } finally {
+      setPendingDeleteGoal(null)
     }
   }
 
@@ -95,26 +120,29 @@ export default function GoalsPanel({ userProfileId, profileName }: GoalsPanelPro
   const initialLoading = goalsState.loading && goalsState.goals.length === 0
 
   return (
-    <section className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Goals</h3>
-          <p className="mt-1 text-sm text-gray-500">Personal goals for {profileName}</p>
-        </div>
-        <button className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60" disabled={goalsState.mutating} type="button" onClick={beginCreate}>
-          Add goal
-        </button>
-      </div>
+    <Card as="section" padding="normal" className="min-w-0 space-y-5" aria-labelledby={headingId}>
+      <SectionHeader
+        headingId={headingId}
+        headingLevel={2}
+        title="Personal goals"
+        description={`Goals owned by ${profileName}. Switching profiles changes this section.`}
+        actions={(
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge tone="information">Owner: {profileName}</StatusBadge>
+            <Button disabled={goalsState.mutating} onClick={beginCreate}>Add goal</Button>
+          </div>
+        )}
+      />
 
-      <div className="flex flex-wrap gap-2" aria-label="Goal status filter">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Personal goal status filter">
         {filters.map((filter) => {
           const selected = goalsState.statusFilter === filter.value
           return (
-            <button
+            <Button
               key={filter.label}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium ${selected ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 ring-1 ring-gray-200'}`}
-              disabled={goalsState.loading}
-              type="button"
+              variant={selected ? 'primary' : 'secondary'}
+              aria-pressed={selected}
+              disabled={goalsState.loading || goalsState.mutating}
               onClick={() => {
                 setShowForm(false)
                 setEditingGoal(null)
@@ -122,35 +150,41 @@ export default function GoalsPanel({ userProfileId, profileName }: GoalsPanelPro
               }}
             >
               {filter.label}
-            </button>
+            </Button>
           )
         })}
       </div>
 
-      {showForm && (
+      {showForm ? (
         <GoalForm
           editingGoal={editingGoal}
           mutating={goalsState.mutating}
           onCancel={() => { setShowForm(false); setEditingGoal(null) }}
           onSubmit={saveGoal}
         />
-      )}
+      ) : null}
 
-      {goalsState.refreshing && <p className="text-sm text-gray-500">Refreshing goals...</p>}
-      {(actionError || goalsState.error) && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3" role="alert">
-          <p className="text-sm font-medium text-red-700">{actionError ?? goalsState.error}</p>
-          <button className="mt-2 text-sm font-semibold text-red-700 underline" type="button" onClick={goalsState.reload}>Retry</button>
-        </div>
-      )}
-      {successMessage && <p className="rounded-xl bg-green-50 p-3 text-sm font-medium text-green-700" role="status">{successMessage}</p>}
+      {goalsState.refreshing ? <LoadingState compact message="Refreshing personal goals..." /> : null}
+      {actionError || goalsState.error ? (
+        <Alert
+          tone="error"
+          title="Unable to update personal goals"
+          action={<Button variant="secondary" size="compact" disabled={goalsState.mutating} onClick={goalsState.reload}>Retry</Button>}
+        >
+          {actionError ?? goalsState.error}
+        </Alert>
+      ) : null}
+      {successMessage ? <Alert tone="success">{successMessage}</Alert> : null}
 
       {initialLoading ? (
-        <p className="rounded-xl bg-white p-4 text-sm text-gray-500">Loading goals...</p>
+        <LoadingState message="Loading personal goals..." />
       ) : goalsState.goals.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-gray-300 bg-white p-5 text-center text-sm text-gray-500">No goals match this filter.</p>
+        <EmptyState
+          title="No personal goals match this filter"
+          description={`Choose another status or add a goal for ${profileName}.`}
+        />
       ) : (
-        <div className="space-y-3">
+        <div className="grid min-w-0 gap-4">
           {goalsState.goals.map((goal) => (
             <GoalCard
               key={goal.id}
@@ -166,16 +200,34 @@ export default function GoalsPanel({ userProfileId, profileName }: GoalsPanelPro
         </div>
       )}
 
-      {goalsState.achievements.length > 0 && (
-        <div>
-          <h4 className="mb-2 text-sm font-semibold text-gray-800">Achievements</h4>
-          <div className="grid gap-2 sm:grid-cols-2">
+      {goalsState.achievements.length > 0 ? (
+        <section className="min-w-0 space-y-3" aria-labelledby={`goal-achievements-heading-${userProfileId}`}>
+          <SectionHeader
+            headingId={`goal-achievements-heading-${userProfileId}`}
+            headingLevel={3}
+            title="Goal achievements"
+            description={`Achievements earned by ${profileName}.`}
+          />
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2">
             {goalsState.achievements.map((achievement) => (
               <AchievementBadge key={`${achievement.achievementType}-${achievement.goalId ?? 'none'}-${achievement.challengeId ?? 'none'}`} achievement={achievement} />
             ))}
           </div>
-        </div>
-      )}
-    </section>
+        </section>
+      ) : null}
+
+      <ConfirmDialog
+        open={pendingDeleteGoal !== null}
+        title="Delete personal goal?"
+        description={pendingDeleteGoal
+          ? `“${pendingDeleteGoal.title}” and its check-ins will be permanently removed. This action cannot be undone.`
+          : ''}
+        confirmLabel="Delete goal"
+        confirmingLabel="Deleting goal..."
+        confirming={goalsState.mutating}
+        onCancel={() => setPendingDeleteGoal(null)}
+        onConfirm={() => { void confirmRemoveGoal() }}
+      />
+    </Card>
   )
 }

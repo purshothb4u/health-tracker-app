@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useWaterTracking } from '../hooks/useWaterTracking'
 import type { WaterEntry, WaterEntryRequest, WaterGoal, WaterGoalRequest } from '../types/WaterTracking'
+import { formatLocalDate } from '../utils/dateFormatting'
 import HydrationSummaryCard from './HydrationSummaryCard'
 import WaterEntryForm from './WaterEntryForm'
 import WaterEntryHistory from './WaterEntryHistory'
 import WaterGoalEditor from './WaterGoalEditor'
 import WaterQuickAdd from './WaterQuickAdd'
+import { Alert } from './ui/Alert'
+import { Button } from './ui/Button'
+import { ConfirmDialog } from './ui/ConfirmDialog'
+import { Field } from './ui/Field'
+import { LoadingState } from './ui/LoadingState'
+import { SectionHeader } from './ui/SectionHeader'
 
 interface WaterTrackingPanelProps {
   userProfileId: number
@@ -41,53 +48,77 @@ export default function WaterTrackingPanel({ userProfileId, profileName }: Water
     updateGoal,
   } = useWaterTracking(userProfileId)
   const [editingEntry, setEditingEntry] = useState<WaterEntry | null>(null)
+  const [pendingDeleteEntryId, setPendingDeleteEntryId] = useState<number | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   useEffect(() => {
     setEditingEntry(null)
+    setPendingDeleteEntryId(null)
     setActionError(null)
+    setSuccessMessage(null)
   }, [selectedDate, userProfileId])
 
   async function handleQuickAdd(amountMl: number): Promise<void> {
     setActionError(null)
+    setSuccessMessage(null)
     try {
       await createEntry({ entryDate: selectedDate, amountMl })
+      setSuccessMessage(`${amountMl.toLocaleString()} ml added.`)
     } catch (err) {
       setActionError(getErrorMessage(err, 'Failed to add water.'))
     }
   }
 
   async function handleDelete(waterEntryId: number): Promise<void> {
-    if (!window.confirm('Delete this water entry?')) {
-      return
-    }
-
     setActionError(null)
+    setSuccessMessage(null)
+    setPendingDeleteEntryId(waterEntryId)
+  }
+
+  async function confirmDelete(): Promise<void> {
+    if (pendingDeleteEntryId === null) return
+    const waterEntryId = pendingDeleteEntryId
+    setActionError(null)
+    setSuccessMessage(null)
     try {
       await deleteEntry(waterEntryId)
       if (editingEntry?.id === waterEntryId) {
         setEditingEntry(null)
       }
+      setSuccessMessage('Water entry deleted.')
     } catch (err) {
       setActionError(getErrorMessage(err, 'Failed to delete water entry.'))
+    } finally {
+      setPendingDeleteEntryId(null)
     }
   }
 
   function handleEdit(entry: WaterEntry) {
     setActionError(null)
+    setSuccessMessage(null)
     setEditingEntry(entry)
   }
 
   async function handleCreate(data: WaterEntryRequest): Promise<WaterEntry> {
-    return createEntry(data)
+    setSuccessMessage(null)
+    const createdEntry = await createEntry(data)
+    setSuccessMessage('Water entry added.')
+    return createdEntry
   }
 
   async function handleUpdate(waterEntryId: number, data: WaterEntryRequest): Promise<WaterEntry> {
-    return updateEntry(waterEntryId, data)
+    setSuccessMessage(null)
+    const updatedEntry = await updateEntry(waterEntryId, data)
+    setSuccessMessage('Water entry updated.')
+    return updatedEntry
   }
 
   async function handleGoalUpdate(data: WaterGoalRequest): Promise<WaterGoal> {
-    return updateGoal(data)
+    setSuccessMessage(null)
+    const updatedGoal = await updateGoal(data)
+    setSuccessMessage('Daily water goal saved.')
+    return updatedGoal
   }
 
   const hasLoadedData = summary !== null || goal !== null || entries.length > 0
@@ -95,54 +126,50 @@ export default function WaterTrackingPanel({ userProfileId, profileName }: Water
   const isRefreshing = loading && hasLoadedData
 
   return (
-    <section className="space-y-4" aria-labelledby={`water-tracking-heading-${userProfileId}`}>
-      <div className="px-1 sm:flex sm:items-end sm:justify-between sm:gap-4">
-        <div>
-          <h3 id={`water-tracking-heading-${userProfileId}`} className="text-lg font-semibold text-gray-900">
-            {profileName}&apos;s water tracking
-          </h3>
-          <p className="mt-1 text-sm text-gray-500">Record water and review progress against your configured goal.</p>
-        </div>
-        <label className="mt-3 block text-sm font-medium text-gray-700 sm:mt-0">
-          Date
-          <input
-            className="mt-1 block rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            disabled={mutating}
-            max={getTodayLocalDate()}
-            type="date"
-            value={selectedDate}
-            onChange={(event) => setSelectedDate(event.target.value)}
-          />
-        </label>
-      </div>
+    <section className="min-w-0 space-y-4" aria-labelledby={`water-tracking-heading-${userProfileId}`}>
+      <SectionHeader
+        headingId={`water-tracking-heading-${userProfileId}`}
+        headingLevel={2}
+        title="Hydration and water tracking"
+        description={`Review ${profileName}'s hydration for ${formatLocalDate(selectedDate)} using the current configured goal.`}
+        actions={(
+          <Field label="Water date" className="w-full sm:w-auto">
+            {(controlProps) => (
+              <input
+                {...controlProps}
+                className="min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus sm:w-auto"
+                disabled={mutating}
+                max={getTodayLocalDate()}
+                type="date"
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(event.target.value)}
+              />
+            )}
+          </Field>
+        )}
+      />
 
-      {isInitialLoading && (
-        <div className="rounded-2xl border border-gray-200 bg-white px-4 py-5 text-sm text-gray-600 shadow-sm" role="status">
-          Loading water tracking...
-        </div>
-      )}
+      {isInitialLoading && <LoadingState message="Loading water tracking..." />}
 
-      {isRefreshing && <p className="px-1 text-sm text-gray-500" role="status">Refreshing water tracking...</p>}
+      {isRefreshing && <p className="px-1 text-sm text-app-secondary" role="status">Refreshing water tracking...</p>}
 
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4" role="alert">
-          <p className="text-sm font-medium text-red-700">{error}</p>
-          <button
-            className="mt-2 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"
-            disabled={mutating}
-            type="button"
-            onClick={reload}
-          >
-            Retry
-          </button>
-        </div>
+        <Alert
+          tone="error"
+          title="Unable to load water tracking"
+          action={<Button variant="secondary" size="compact" disabled={mutating} onClick={reload}>Retry</Button>}
+        >
+          {error}
+        </Alert>
       )}
 
       {actionError && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm font-medium text-red-700" role="alert">
+        <Alert tone="error" title="Water action failed">
           {actionError}
-        </div>
+        </Alert>
       )}
+
+      {successMessage && <Alert tone="success">{successMessage}</Alert>}
 
       {hasLoadedData && goal && (
         <>
@@ -165,6 +192,17 @@ export default function WaterTrackingPanel({ userProfileId, profileName }: Water
           />
         </>
       )}
+
+      <ConfirmDialog
+        open={pendingDeleteEntryId !== null}
+        title="Delete water entry?"
+        description="This water entry will be permanently removed from the selected day. This action cannot be undone."
+        confirmLabel="Delete water entry"
+        confirmingLabel="Deleting water entry..."
+        confirming={mutating}
+        onCancel={() => setPendingDeleteEntryId(null)}
+        onConfirm={() => { void confirmDelete() }}
+      />
     </section>
   )
 }

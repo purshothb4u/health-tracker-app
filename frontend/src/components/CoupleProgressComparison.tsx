@@ -1,36 +1,54 @@
 import type { CoupleChallengeProgress, ParticipantProgress } from '../types/CoupleChallenge'
+import { Alert } from './ui/Alert'
+import { ProgressBar } from './ui/ProgressBar'
+import { StatusBadge } from './ui/StatusBadge'
 
 function ParticipantProgressCard({ participant }: { participant: ParticipantProgress }) {
   if (!participant.progressAvailable) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-        <p className="font-semibold text-gray-900">{participant.profileName}</p>
-        <p className="mt-2 text-sm text-gray-500">{participant.message ?? 'Progress is not available.'}</p>
+      <div className="min-w-0 rounded-xl border border-app-border bg-app-surface p-4">
+        <h4 className="break-words font-semibold text-app-primary">{participant.profileName}</h4>
+        <Alert className="mt-3" tone="information" title="Progress unavailable">
+          {participant.message ?? 'Progress is not available.'}
+        </Alert>
       </div>
     )
   }
 
-  const visiblePercentage = participant.progressPercentage ?? 0
-  const cappedPercentage = Math.min(Math.max(visiblePercentage, 0), 100)
+  const percentageText = participant.progressPercentage === null
+    ? 'Not available'
+    : `${participant.progressPercentage.toFixed(2)}%`
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-      <div className="flex items-start justify-between gap-2">
-        <p className="font-semibold text-gray-900">{participant.profileName}</p>
-        <span className="text-xs font-semibold text-gray-600">{participant.points} points</span>
+    <div className="min-w-0 space-y-3 rounded-xl border border-app-border bg-app-surface p-4">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <h4 className="break-words font-semibold text-app-primary">{participant.profileName}</h4>
+        <StatusBadge tone="information">{participant.points} points</StatusBadge>
       </div>
-      <p className="mt-2 text-sm text-gray-700">
+      <p className="break-words text-sm text-app-secondary">
         {participant.currentValue ?? 'Not available'} / {participant.targetValue} {participant.displayUnit}
       </p>
-      <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-gray-200" aria-label={`${participant.profileName} progress`}>
-        <div className="h-full rounded-full bg-primary-500" style={{ width: `${cappedPercentage}%` }} />
-      </div>
-      <p className="mt-1 text-xs text-gray-500">
-        {participant.progressPercentage === null ? 'Not available' : `${participant.progressPercentage.toFixed(2)}%`}
-      </p>
-      {participant.goalReached === true && <p className="mt-1 text-xs font-medium text-green-700">Target reached.</p>}
-      {participant.goalReached === false && <p className="mt-1 text-xs font-medium text-gray-600">Target not yet reached.</p>}
-      {participant.message && <p className="mt-2 text-xs text-gray-500">{participant.message}</p>}
+      {participant.progressPercentage === null ? (
+        <p className="text-sm font-medium text-app-secondary" role="status">
+          Percentage is not available.
+        </p>
+      ) : (
+        <ProgressBar
+          value={participant.progressPercentage}
+          maximum={100}
+          label={`${participant.profileName} progress`}
+          valueText={percentageText}
+        />
+      )}
+      {participant.goalReached === true ? (
+        <p className="text-sm font-medium text-success">Target reached.</p>
+      ) : null}
+      {participant.goalReached === false ? (
+        <p className="text-sm font-medium text-app-secondary">Target not yet reached.</p>
+      ) : null}
+      {participant.message ? (
+        <p className="break-words text-sm leading-6 text-app-secondary">{participant.message}</p>
+      ) : null}
     </div>
   )
 }
@@ -41,18 +59,22 @@ export default function CoupleProgressComparison({ progress }: { progress: Coupl
   )
 
   return (
-    <div className="rounded-xl border border-primary-100 bg-primary-50 p-3">
-      <div className="grid gap-3 sm:grid-cols-2">
+    <div className="min-w-0 space-y-4 rounded-xl border border-primary-100 bg-primary-50/40 p-4">
+      <div className="grid min-w-0 gap-3 md:grid-cols-2">
         {progress.participantProgress.map((participant) => (
           <ParticipantProgressCard key={participant.userProfileId} participant={participant} />
         ))}
       </div>
-      <div className="mt-3 space-y-1 text-sm text-gray-700">
-        <p className="font-medium">{progress.outcome}</p>
-        <p>{progress.supportiveMessage}</p>
-        {progress.tie && <p className="text-xs text-gray-600">Current result: tie</p>}
-        {!progress.tie && leader && <p className="text-xs text-gray-600">Current leader: {leader.profileName}</p>}
-        {progress.bothCompleted && <p className="text-xs font-semibold text-green-700">Both participants reached the target.</p>}
+      <div className="min-w-0 space-y-2 border-t border-primary-100 pt-4 text-sm leading-6 text-app-secondary">
+        <p className="break-words font-semibold text-app-primary">{progress.outcome}</p>
+        <p className="break-words">{progress.supportiveMessage}</p>
+        {progress.tie ? <StatusBadge tone="information">Current result: tie</StatusBadge> : null}
+        {!progress.tie && leader ? (
+          <StatusBadge tone="information">Current leader: {leader.profileName}</StatusBadge>
+        ) : null}
+        {progress.bothCompleted ? (
+          <p className="break-words font-semibold text-success">Both participants reached the target.</p>
+        ) : null}
       </div>
     </div>
   )

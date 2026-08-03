@@ -1,24 +1,26 @@
 import type { NutritionAnalytics, WeightAnalytics } from '../types/Analytics'
 import { formatAnalyticsNumber, formatAnalyticsValue } from '../utils/analyticsFormatting'
+import { Card } from './ui/Card'
+import { SectionHeader } from './ui/SectionHeader'
 
 interface AnalyticsSummaryCardsProps {
   weightAnalytics: WeightAnalytics
   nutritionAnalytics: NutritionAnalytics
 }
 
-interface SummaryCardProps {
+interface AnalyticsSummaryCardProps {
   label: string
   value: string
   detail?: string
 }
 
-function SummaryCard({ label, value, detail }: SummaryCardProps) {
+function AnalyticsSummaryCard({ label, value, detail }: AnalyticsSummaryCardProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <dt className="text-sm text-gray-500">{label}</dt>
-      <dd className="mt-1 text-lg font-bold text-gray-900">{value}</dd>
-      {detail && <p className="mt-1 text-xs text-gray-500">{detail}</p>}
-    </div>
+    <Card padding="compact" className="min-w-0">
+      <dt className="break-words text-sm font-medium text-app-secondary">{label}</dt>
+      <dd className="mt-2 break-words text-xl font-semibold tabular-nums text-app-primary">{value}</dd>
+      {detail ? <p className="mt-1 break-words text-xs leading-5 text-app-secondary">{detail}</p> : null}
+    </Card>
   )
 }
 
@@ -35,49 +37,47 @@ export default function AnalyticsSummaryCards({
   nutritionAnalytics,
 }: AnalyticsSummaryCardsProps) {
   return (
-    <section aria-labelledby="analytics-summary-heading">
-      <div className="mb-3">
-        <h4 id="analytics-summary-heading" className="text-base font-semibold text-gray-900">
-          Selected-range summary
-        </h4>
-        <p className="mt-1 text-sm text-gray-500">Values reflect recorded data in the selected range.</p>
-      </div>
-      <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
+    <section className="min-w-0 space-y-4" aria-labelledby="analytics-summary-heading">
+      <SectionHeader
+        headingId="analytics-summary-heading"
+        headingLevel={3}
+        title="Selected-range summary"
+        description="Values reflect recorded data in the selected date range."
+      />
+      <dl className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <AnalyticsSummaryCard
           label="Last weight in range"
           value={formatAnalyticsValue(weightAnalytics.lastWeightKgInRange, ' kg')}
         />
-        <SummaryCard label="Weight change" value={formatWeightChange(weightAnalytics.weightChangeKg)} />
-        <SummaryCard
+        <AnalyticsSummaryCard label="Weight change" value={formatWeightChange(weightAnalytics.weightChangeKg)} />
+        <AnalyticsSummaryCard
           label="Average weight"
           value={formatAnalyticsValue(weightAnalytics.averageWeightKg, ' kg')}
         />
-        <SummaryCard
+        <AnalyticsSummaryCard
           label="Progress at end of range"
           value={formatAnalyticsValue(weightAnalytics.progressAtEndOfRangePercentage, '%')}
         />
-        <SummaryCard
+        <AnalyticsSummaryCard
           label="Average calories"
           value={formatAnalyticsValue(nutritionAnalytics.averageCaloriesPerLoggedDay, ' kcal')}
           detail="Per logged day"
         />
-        <SummaryCard
+        <AnalyticsSummaryCard
           label="Average protein"
           value={formatAnalyticsValue(nutritionAnalytics.averageProteinGramsPerLoggedDay, ' g')}
           detail="Per logged day"
         />
-        <SummaryCard
+        <AnalyticsSummaryCard
           label="Days with food logs"
           value={String(nutritionAnalytics.daysWithFoodLogs)}
           detail={`${nutritionAnalytics.totalDaysInRange} days in range`}
         />
-        <SummaryCard
+        <AnalyticsSummaryCard
           label="Logged days below maintenance"
-          value={
-            nutritionAnalytics.daysBelowMaintenance === null
-              ? 'Not available'
-              : String(nutritionAnalytics.daysBelowMaintenance)
-          }
+          value={nutritionAnalytics.daysBelowMaintenance === null
+            ? 'Not available'
+            : String(nutritionAnalytics.daysBelowMaintenance)}
         />
       </dl>
     </section>

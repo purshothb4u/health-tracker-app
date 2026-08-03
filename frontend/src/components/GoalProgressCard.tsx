@@ -1,4 +1,6 @@
 import type { GoalProgress } from '../types/Goal'
+import { Alert } from './ui/Alert'
+import { ProgressBar } from './ui/ProgressBar'
 
 interface GoalProgressCardProps {
   progress: GoalProgress
@@ -7,36 +9,47 @@ interface GoalProgressCardProps {
 export default function GoalProgressCard({ progress }: GoalProgressCardProps) {
   if (!progress.progressAvailable) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm text-gray-600">
+      <Alert tone="information" title="Progress unavailable">
         {progress.message ?? 'Progress is currently unavailable.'}
-      </div>
+      </Alert>
     )
   }
 
-  const visualPercentage = Math.min(Math.max(progress.progressPercentage ?? 0, 0), 100)
+  const percentageText = progress.progressPercentage === null
+    ? 'Not available'
+    : `${progress.progressPercentage.toFixed(2)}%`
 
   return (
-    <div className="space-y-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-sm font-semibold text-gray-800">
+    <div className="min-w-0 space-y-3 rounded-xl border border-app-border bg-slate-50 p-4">
+      <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+        <p className="break-words text-sm font-semibold text-app-primary">
           {progress.currentValue ?? 'Not available'} / {progress.targetValue} {progress.displayUnit}
         </p>
-        <p className="text-sm text-gray-600">
-          {progress.progressPercentage === null ? 'Not available' : `${progress.progressPercentage.toFixed(2)}%`} · {progress.points} points
+        <p className="break-words text-sm text-app-secondary">
+          {percentageText} &middot; {progress.points} points
         </p>
       </div>
-      <div className="h-2.5 overflow-hidden rounded-full bg-gray-200" aria-hidden="true">
-        <div
-          className="h-full rounded-full bg-primary-500"
-          style={{ width: `${visualPercentage}%` }}
+      {progress.progressPercentage === null ? (
+        <p className="text-sm font-medium text-app-secondary" role="status">
+          Percentage is not available.
+        </p>
+      ) : (
+        <ProgressBar
+          value={progress.progressPercentage}
+          maximum={100}
+          label="Goal progress"
+          valueText={percentageText}
         />
-      </div>
-      {progress.goalReached && (
-        <p className="text-xs font-medium text-green-700">Target reached.</p>
       )}
-      {progress.goalReached === false && (
-        <p className="text-xs font-medium text-gray-600">Target not yet reached.</p>
-      )}
+      {progress.goalReached === true ? (
+        <p className="text-sm font-medium text-success">Target reached.</p>
+      ) : null}
+      {progress.goalReached === false ? (
+        <p className="text-sm font-medium text-app-secondary">Target not yet reached.</p>
+      ) : null}
+      {progress.message ? (
+        <p className="break-words text-sm text-app-secondary">{progress.message}</p>
+      ) : null}
     </div>
   )
 }

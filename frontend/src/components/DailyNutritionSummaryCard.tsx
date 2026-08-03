@@ -1,4 +1,7 @@
 import type { DailyNutritionSummary } from '../types/FoodEntry'
+import { formatLocalDate } from '../utils/dateFormatting'
+import { Card } from './ui/Card'
+import { SectionHeader } from './ui/SectionHeader'
 
 interface DailyNutritionSummaryCardProps {
   summary: DailyNutritionSummary
@@ -14,46 +17,48 @@ function formatCalories(value: number | null): string {
 
 export default function DailyNutritionSummaryCard({ summary }: DailyNutritionSummaryCardProps) {
   return (
-    <section className="rounded-2xl border border-primary-100 bg-primary-50 p-5">
-      <div>
-        <h4 className="text-base font-semibold text-gray-900">Daily nutrition summary</h4>
-        <p className="mt-1 text-sm text-gray-600">Totals for the selected date</p>
-      </div>
+    <Card as="section" padding="normal" aria-labelledby={`nutrition-summary-heading-${summary.userProfileId}`}>
+      <SectionHeader
+        headingId={`nutrition-summary-heading-${summary.userProfileId}`}
+        headingLevel={3}
+        title="Daily nutrition summary"
+        description={`Backend-calculated totals for ${formatLocalDate(summary.entryDate)}.`}
+      />
 
-      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded-xl bg-white p-3">
-          <dt className="text-gray-500">Total calories</dt>
-          <dd className="mt-1 text-lg font-bold text-gray-900">{formatNumber(summary.totalCalories)} kcal</dd>
+      <dl className="mt-5 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
+        <div className="rounded-xl bg-primary-50 p-4">
+          <dt className="text-app-secondary">Total calories</dt>
+          <dd className="mt-1 break-words text-lg font-bold text-app-primary">{formatNumber(summary.totalCalories)} kcal</dd>
         </div>
-        <div className="rounded-xl bg-white p-3">
-          <dt className="text-gray-500">Maintenance calories</dt>
-          <dd className="mt-1 text-lg font-bold text-gray-900">
+        <div className="rounded-xl bg-slate-50 p-4">
+          <dt className="text-app-secondary">Maintenance calories</dt>
+          <dd className="mt-1 break-words text-lg font-bold text-app-primary">
             {formatCalories(summary.maintenanceCalories)}
           </dd>
         </div>
-        <div className="rounded-xl bg-white p-3">
-          <dt className="text-gray-500">Remaining calories</dt>
-          <dd className="mt-1 text-lg font-bold text-gray-900">
+        <div className="rounded-xl bg-slate-50 p-4">
+          <dt className="text-app-secondary">Remaining calories</dt>
+          <dd className="mt-1 break-words text-lg font-bold text-app-primary">
             {formatCalories(summary.remainingCalories)}
           </dd>
         </div>
-        <div className="rounded-xl bg-white p-3">
-          <dt className="text-gray-500">Protein</dt>
-          <dd className="mt-1 text-lg font-bold text-gray-900">
+        <div className="rounded-xl bg-slate-50 p-4">
+          <dt className="text-app-secondary">Protein</dt>
+          <dd className="mt-1 break-words text-lg font-bold text-app-primary">
             {formatNumber(summary.totalProteinGrams)} g
           </dd>
         </div>
-        <div className="rounded-xl bg-white p-3">
-          <dt className="text-gray-500">Carbohydrates</dt>
-          <dd className="mt-1 text-lg font-bold text-gray-900">
+        <div className="rounded-xl bg-slate-50 p-4">
+          <dt className="text-app-secondary">Carbohydrates</dt>
+          <dd className="mt-1 break-words text-lg font-bold text-app-primary">
             {formatNumber(summary.totalCarbohydrateGrams)} g
           </dd>
         </div>
-        <div className="rounded-xl bg-white p-3">
-          <dt className="text-gray-500">Fat</dt>
-          <dd className="mt-1 text-lg font-bold text-gray-900">{formatNumber(summary.totalFatGrams)} g</dd>
+        <div className="rounded-xl bg-slate-50 p-4">
+          <dt className="text-app-secondary">Fat</dt>
+          <dd className="mt-1 break-words text-lg font-bold text-app-primary">{formatNumber(summary.totalFatGrams)} g</dd>
         </div>
       </dl>
-    </section>
+    </Card>
   )
 }

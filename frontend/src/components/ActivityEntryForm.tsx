@@ -5,6 +5,12 @@ import {
   type ActivityEntry,
   type ActivityEntryRequest,
 } from '../types/ActivityTracking'
+import { formatLocalDate } from '../utils/dateFormatting'
+import { Alert } from './ui/Alert'
+import { Button } from './ui/Button'
+import { Card } from './ui/Card'
+import { Field } from './ui/Field'
+import { SectionHeader } from './ui/SectionHeader'
 
 interface ActivityEntryFormProps {
   selectedDate: string
@@ -19,6 +25,7 @@ interface ActivityEntryFormProps {
 const activityCategories = Object.keys(ACTIVITY_CATEGORY_LABELS) as ActivityCategory[]
 const wholeNumberPattern = /^\d+$/
 const distancePattern = /^\d+(?:\.\d{1,3})?$/
+const controlClassName = 'min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70'
 
 function emptyFormValues() {
   return {
@@ -194,142 +201,78 @@ export default function ActivityEntryForm({
   }
 
   return (
-    <form className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm" onSubmit={handleSubmit}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h4 className="text-base font-semibold text-gray-900">
-            {isEditing ? 'Edit activity entry' : 'Add activity entry'}
-          </h4>
-          <p className="mt-1 text-sm text-gray-500">
-            {isEditing ? `Update the activity for ${selectedDate}.` : `Record activity for ${selectedDate}.`}
-          </p>
+    <Card as="section" padding="normal" aria-labelledby="activity-entry-form-heading">
+      <form aria-describedby={error ? 'activity-entry-form-error' : undefined} onSubmit={handleSubmit}>
+        <SectionHeader
+          headingId="activity-entry-form-heading"
+          headingLevel={3}
+          title={isEditing ? 'Edit activity entry' : 'Add activity entry'}
+          description={`${isEditing ? 'Update' : 'Record'} activity for ${formatLocalDate(selectedDate)}.`}
+          actions={isEditing ? (
+            <Button variant="secondary" disabled={mutating} onClick={onCancelEdit}>
+              Cancel edit
+            </Button>
+          ) : undefined}
+        />
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <Field label="Selected date">
+            {(controlProps) => (
+              <input {...controlProps} className={`${controlClassName} bg-slate-100`} readOnly type="text" value={formatLocalDate(selectedDate)} />
+            )}
+          </Field>
+          <Field label="Category" required>
+            {(controlProps) => (
+              <select {...controlProps} className={controlClassName} disabled={mutating} value={formValues.category} onChange={(event) => updateField('category', event.target.value)}>
+                {activityCategories.map((category) => (
+                  <option key={category} value={category}>{ACTIVITY_CATEGORY_LABELS[category]}</option>
+                ))}
+              </select>
+            )}
+          </Field>
         </div>
-        {isEditing && (
-          <button
-            className="shrink-0 text-sm font-medium text-gray-600 underline disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={mutating}
-            type="button"
-            onClick={onCancelEdit}
-          >
-            Cancel edit
-          </button>
-        )}
-      </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm font-medium text-gray-700">
-          Selected date
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-700"
-            readOnly
-            type="text"
-            value={selectedDate}
-          />
-        </label>
-        <label className="block text-sm font-medium text-gray-700">
-          Category
-          <select
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            disabled={mutating}
-            value={formValues.category}
-            onChange={(event) => updateField('category', event.target.value)}
-          >
-            {activityCategories.map((category) => (
-              <option key={category} value={category}>
-                {ACTIVITY_CATEGORY_LABELS[category]}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+        <Field className="mt-4" label="Activity name" required hint="Use a clear name up to 100 characters.">
+          {(controlProps) => (
+            <input {...controlProps} className={controlClassName} disabled={mutating} maxLength={100} type="text" value={formValues.activityName} onChange={(event) => updateField('activityName', event.target.value)} />
+          )}
+        </Field>
 
-      <label className="mt-4 block text-sm font-medium text-gray-700">
-        Activity name
-        <input
-          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-          disabled={mutating}
-          maxLength={100}
-          type="text"
-          value={formValues.activityName}
-          onChange={(event) => updateField('activityName', event.target.value)}
-        />
-      </label>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <Field label="Duration (minutes)" required hint="Enter a whole number from 1 to 1,440.">
+            {(controlProps) => (
+              <input {...controlProps} className={controlClassName} disabled={mutating} inputMode="numeric" placeholder="e.g. 45" type="text" value={formValues.durationMinutes} onChange={(event) => updateField('durationMinutes', event.target.value)} />
+            )}
+          </Field>
+          <Field label="Steps" optional hint="Leave blank if not supplied; zero remains a recorded value.">
+            {(controlProps) => (
+              <input {...controlProps} className={controlClassName} disabled={mutating} inputMode="numeric" placeholder="e.g. 8500" type="text" value={formValues.steps} onChange={(event) => updateField('steps', event.target.value)} />
+            )}
+          </Field>
+          <Field label="Distance (km)" optional hint="Up to three decimal places; zero remains a recorded value.">
+            {(controlProps) => (
+              <input {...controlProps} className={controlClassName} disabled={mutating} inputMode="decimal" placeholder="e.g. 3.275" type="text" value={formValues.distanceKm} onChange={(event) => updateField('distanceKm', event.target.value)} />
+            )}
+          </Field>
+          <Field label="Reported calories burned" optional hint="User-reported kcal; not automatically calculated.">
+            {(controlProps) => (
+              <input {...controlProps} className={controlClassName} disabled={mutating} inputMode="numeric" placeholder="e.g. 250" type="text" value={formValues.reportedCaloriesBurned} onChange={(event) => updateField('reportedCaloriesBurned', event.target.value)} />
+            )}
+          </Field>
+        </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm font-medium text-gray-700">
-          Duration (minutes)
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            disabled={mutating}
-            inputMode="numeric"
-            placeholder="e.g. 45"
-            type="text"
-            value={formValues.durationMinutes}
-            onChange={(event) => updateField('durationMinutes', event.target.value)}
-          />
-        </label>
-        <label className="block text-sm font-medium text-gray-700">
-          Steps <span className="font-normal text-gray-400">(optional)</span>
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            disabled={mutating}
-            inputMode="numeric"
-            placeholder="e.g. 8500"
-            type="text"
-            value={formValues.steps}
-            onChange={(event) => updateField('steps', event.target.value)}
-          />
-        </label>
-        <label className="block text-sm font-medium text-gray-700">
-          Distance (km) <span className="font-normal text-gray-400">(optional)</span>
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            disabled={mutating}
-            inputMode="decimal"
-            placeholder="e.g. 3.275"
-            type="text"
-            value={formValues.distanceKm}
-            onChange={(event) => updateField('distanceKm', event.target.value)}
-          />
-        </label>
-        <label className="block text-sm font-medium text-gray-700">
-          Reported calories burned <span className="font-normal text-gray-400">(optional)</span>
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            disabled={mutating}
-            inputMode="numeric"
-            placeholder="User-reported kcal"
-            type="text"
-            value={formValues.reportedCaloriesBurned}
-            onChange={(event) => updateField('reportedCaloriesBurned', event.target.value)}
-          />
-        </label>
-      </div>
+        <Field className="mt-4" label="Notes" optional hint="Up to 500 characters.">
+          {(controlProps) => (
+            <textarea {...controlProps} className={`${controlClassName} min-h-24 resize-y`} disabled={mutating} maxLength={500} value={formValues.notes} onChange={(event) => updateField('notes', event.target.value)} />
+          )}
+        </Field>
 
-      <label className="mt-4 block text-sm font-medium text-gray-700">
-        Notes <span className="font-normal text-gray-400">(optional)</span>
-        <textarea
-          className="mt-1 min-h-20 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-          disabled={mutating}
-          maxLength={500}
-          value={formValues.notes}
-          onChange={(event) => updateField('notes', event.target.value)}
-        />
-      </label>
+        {error ? <Alert id="activity-entry-form-error" className="mt-4" tone="error" title="Check the activity entry">{error}</Alert> : null}
 
-      {error && (
-        <p className="mt-3 text-sm font-medium text-red-700" role="alert">
-          {error}
-        </p>
-      )}
-
-      <button
-        className="mt-4 w-full rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={mutating}
-        type="submit"
-      >
-        {mutating ? 'Saving...' : isEditing ? 'Update activity entry' : 'Add activity entry'}
-      </button>
-    </form>
+        <Button className="mt-5" disabled={mutating} fullWidth type="submit">
+          {mutating ? 'Saving activity entry...' : isEditing ? 'Update activity entry' : 'Add activity entry'}
+        </Button>
+      </form>
+    </Card>
   )
 }

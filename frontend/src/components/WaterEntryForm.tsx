@@ -1,5 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import type { WaterEntry, WaterEntryRequest } from '../types/WaterTracking'
+import { formatLocalDate } from '../utils/dateFormatting'
+import { Alert } from './ui/Alert'
+import { Button } from './ui/Button'
+import { Card } from './ui/Card'
+import { Field } from './ui/Field'
+import { SectionHeader } from './ui/SectionHeader'
+
+const controlClassName = 'min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70'
 
 interface WaterEntryFormProps {
   selectedDate: string
@@ -73,73 +81,62 @@ export default function WaterEntryForm({
   }
 
   return (
-    <form className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm" onSubmit={handleSubmit}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h4 className="text-base font-semibold text-gray-900">
-            {isEditing ? 'Edit water entry' : 'Add water entry'}
-          </h4>
-          <p className="mt-1 text-sm text-gray-500">
-            {isEditing ? `Update the entry for ${selectedDate}.` : `Record water for ${selectedDate}.`}
-          </p>
-        </div>
-        {isEditing && (
-          <button
-            className="text-sm font-medium text-gray-600 underline disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={mutating}
-            type="button"
-            onClick={onCancelEdit}
-          >
-            Cancel edit
-          </button>
-        )}
-      </div>
-
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm font-medium text-gray-700">
-          Selected date
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-700"
-            readOnly
-            type="text"
-            value={selectedDate}
-          />
-        </label>
-        <label className="block text-sm font-medium text-gray-700">
-          Amount (ml)
-          <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            disabled={mutating}
-            inputMode="numeric"
-            min="1"
-            step="1"
-            type="number"
-            value={formValues.amountMl}
-            onChange={(event) => setFormValues((current) => ({ ...current, amountMl: event.target.value }))}
-          />
-        </label>
-      </div>
-
-      <label className="mt-4 block text-sm font-medium text-gray-700">
-        Notes <span className="font-normal text-gray-400">(optional)</span>
-        <textarea
-          className="mt-1 min-h-20 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-          disabled={mutating}
-          maxLength={500}
-          value={formValues.notes}
-          onChange={(event) => setFormValues((current) => ({ ...current, notes: event.target.value }))}
+    <Card as="section" padding="normal" aria-labelledby="water-entry-form-heading">
+      <form aria-describedby={error ? 'water-entry-form-error' : undefined} onSubmit={handleSubmit}>
+        <SectionHeader
+          headingId="water-entry-form-heading"
+          headingLevel={3}
+          title={isEditing ? 'Edit water entry' : 'Add custom water entry'}
+          description={`${isEditing ? 'Update' : 'Record'} water for ${formatLocalDate(selectedDate)}.`}
+          actions={isEditing ? (
+            <Button variant="secondary" disabled={mutating} onClick={onCancelEdit}>
+              Cancel edit
+            </Button>
+          ) : undefined}
         />
-      </label>
 
-      {error && <p className="mt-3 text-sm font-medium text-red-700" role="alert">{error}</p>}
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <Field label="Selected date">
+            {(controlProps) => (
+              <input {...controlProps} className={`${controlClassName} bg-slate-100`} readOnly type="text" value={formatLocalDate(selectedDate)} />
+            )}
+          </Field>
+          <Field label="Amount (ml)" required hint="Enter a positive whole number of millilitres.">
+            {(controlProps) => (
+              <input
+                {...controlProps}
+                className={controlClassName}
+                disabled={mutating}
+                inputMode="numeric"
+                min="1"
+                step="1"
+                type="number"
+                value={formValues.amountMl}
+                onChange={(event) => setFormValues((current) => ({ ...current, amountMl: event.target.value }))}
+              />
+            )}
+          </Field>
+        </div>
 
-      <button
-        className="mt-4 w-full rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={mutating}
-        type="submit"
-      >
-        {mutating ? 'Saving...' : isEditing ? 'Update water entry' : 'Add water entry'}
-      </button>
-    </form>
+        <Field className="mt-4" label="Notes" optional hint="Up to 500 characters.">
+          {(controlProps) => (
+            <textarea
+              {...controlProps}
+              className={`${controlClassName} min-h-24 resize-y`}
+              disabled={mutating}
+              maxLength={500}
+              value={formValues.notes}
+              onChange={(event) => setFormValues((current) => ({ ...current, notes: event.target.value }))}
+            />
+          )}
+        </Field>
+
+        {error ? <Alert id="water-entry-form-error" className="mt-4" tone="error" title="Check the water entry">{error}</Alert> : null}
+
+        <Button className="mt-5" disabled={mutating} fullWidth type="submit">
+          {mutating ? 'Saving water entry...' : isEditing ? 'Update water entry' : 'Add water entry'}
+        </Button>
+      </form>
+    </Card>
   )
 }

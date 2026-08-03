@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { ProgressCheckInRequest } from '../types/Goal'
+import { Button } from './ui/Button'
+import { EmptyState } from './ui/EmptyState'
+import { Field } from './ui/Field'
 
 interface GoalCheckInControlProps {
   startDate: string
@@ -28,7 +31,6 @@ export default function GoalCheckInControl({
   const [date, setDate] = useState(today)
   const [completed, setCompleted] = useState(true)
   const [notes, setNotes] = useState('')
-  const [feedback, setFeedback] = useState<string | null>(null)
   const todayIsInRange = today >= startDate && today <= endDate
   const maximumDate = endDate < today ? endDate : today
 
@@ -36,76 +38,81 @@ export default function GoalCheckInControl({
     setDate(today)
     setCompleted(true)
     setNotes('')
-    setFeedback(null)
   }, [endDate, startDate, today])
 
   if (!todayIsInRange) {
     return (
-      <p className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-xs text-gray-600">
-        Check-ins are available during this goal or challenge date range.
-      </p>
+      <EmptyState
+        compact
+        title="Check-in unavailable"
+        description="Check-ins are available only during this goal or challenge date range."
+      />
     )
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setFeedback(null)
     try {
       await onSubmit(date, { completed, notes: notes || null })
-      setFeedback('Check-in saved successfully.')
-    } catch (error) {
-      setFeedback(error instanceof Error ? error.message : 'Failed to save check-in.')
+    } catch {
+      // The owning panel provides the single accessible mutation error message.
     }
   }
 
+  const inputClass = 'min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus'
+
   return (
-    <form className="space-y-3 rounded-xl border border-primary-100 bg-primary-50/50 p-3" onSubmit={handleSubmit}>
-      <p className="text-sm font-semibold text-gray-800">{label}</p>
+    <form
+      className="min-w-0 space-y-4 rounded-xl border border-primary-100 bg-primary-50/50 p-4"
+      aria-label={label}
+      onSubmit={handleSubmit}
+    >
+      <p className="break-words text-sm font-semibold text-app-primary">{label}</p>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-xs font-medium text-gray-700">
-          Date
-          <input
-            className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-            disabled={mutating}
-            max={maximumDate}
-            min={startDate}
-            required
-            type="date"
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-          />
-        </label>
-        <label className="text-xs font-medium text-gray-700">
-          Completed
-          <select
-            className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-            disabled={mutating}
-            value={completed ? 'true' : 'false'}
-            onChange={(event) => setCompleted(event.target.value === 'true')}
-          >
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-          </select>
-        </label>
+        <Field label="Date" required>
+          {(controlProps) => (
+            <input
+              {...controlProps}
+              className={inputClass}
+              disabled={mutating}
+              max={maximumDate}
+              min={startDate}
+              type="date"
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+            />
+          )}
+        </Field>
+        <Field label="Completed" required>
+          {(controlProps) => (
+            <select
+              {...controlProps}
+              className={inputClass}
+              disabled={mutating}
+              value={completed ? 'true' : 'false'}
+              onChange={(event) => setCompleted(event.target.value === 'true')}
+            >
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          )}
+        </Field>
       </div>
-      <label className="block text-xs font-medium text-gray-700">
-        Notes (optional)
-        <input
-          className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-          disabled={mutating}
-          maxLength={500}
-          value={notes}
-          onChange={(event) => setNotes(event.target.value)}
-        />
-      </label>
-      <button
-        className="w-full rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60 sm:w-auto"
-        disabled={mutating}
-        type="submit"
-      >
-        Save check-in
-      </button>
-      {feedback && <p className="text-xs text-gray-700" role="status">{feedback}</p>}
+      <Field label="Notes" optional hint="Up to 500 characters.">
+        {(controlProps) => (
+          <input
+            {...controlProps}
+            className={inputClass}
+            disabled={mutating}
+            maxLength={500}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+          />
+        )}
+      </Field>
+      <Button className="w-full sm:w-auto" disabled={mutating} type="submit">
+        {mutating ? 'Saving check-in...' : 'Save check-in'}
+      </Button>
     </form>
   )
 }

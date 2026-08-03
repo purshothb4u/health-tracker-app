@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useSleepTracking } from '../hooks/useSleepTracking'
 import type { SleepEntry, SleepEntryRequest } from '../types/SleepTracking'
+import { formatLocalDate } from '../utils/dateFormatting'
 import DailySleepSummaryCard from './DailySleepSummaryCard'
 import SleepEntryForm from './SleepEntryForm'
 import SleepEntryHistory from './SleepEntryHistory'
+import { Alert } from './ui/Alert'
+import { Button } from './ui/Button'
+import { ConfirmDialog } from './ui/ConfirmDialog'
+import { Field } from './ui/Field'
+import { LoadingState } from './ui/LoadingState'
+import { SectionHeader } from './ui/SectionHeader'
 
 interface SleepTrackingPanelProps {
   userProfileId: number
@@ -40,11 +47,13 @@ export default function SleepTrackingPanel({
     deleteEntry,
   } = useSleepTracking(userProfileId)
   const [editingEntry, setEditingEntry] = useState<SleepEntry | null>(null)
+  const [pendingDeleteEntryId, setPendingDeleteEntryId] = useState<number | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
 
   useEffect(() => {
     setEditingEntry(null)
+    setPendingDeleteEntryId(null)
     setActionError(null)
     setActionSuccess(null)
   }, [selectedDate, userProfileId])
@@ -77,10 +86,13 @@ export default function SleepTrackingPanel({
   }
 
   async function handleDelete(sleepEntryId: number): Promise<void> {
-    if (!window.confirm('Delete this sleep entry?')) {
-      return
-    }
+    beginAction()
+    setPendingDeleteEntryId(sleepEntryId)
+  }
 
+  async function confirmDelete(): Promise<void> {
+    if (pendingDeleteEntryId === null) return
+    const sleepEntryId = pendingDeleteEntryId
     beginAction()
     try {
       await deleteEntry(sleepEntryId)
@@ -90,6 +102,8 @@ export default function SleepTrackingPanel({
       setActionSuccess('Sleep entry deleted successfully.')
     } catch (err) {
       setActionError(getErrorMessage(err, 'Failed to delete sleep entry.'))
+    } finally {
+      setPendingDeleteEntryId(null)
     }
   }
 
@@ -99,74 +113,56 @@ export default function SleepTrackingPanel({
 
   return (
     <section className="min-w-0 space-y-4" aria-labelledby={`sleep-tracking-heading-${userProfileId}`}>
-      <div className="px-1 sm:flex sm:items-end sm:justify-between sm:gap-4">
-        <div className="min-w-0">
-          <h3
-            id={`sleep-tracking-heading-${userProfileId}`}
-            className="text-lg font-semibold text-gray-900"
-          >
-            {profileName}&apos;s sleep tracking
-          </h3>
-          <p className="mt-1 text-sm text-gray-500">Record sleep sessions and review daily totals.</p>
-        </div>
-        <label className="mt-3 block text-sm font-medium text-gray-700 sm:mt-0">
-          Date
-          <input
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 sm:w-auto"
-            disabled={mutating}
-            max={getTodayLocalDate()}
-            type="date"
-            value={selectedDate}
-            onChange={(event) => setSelectedDate(event.target.value)}
-          />
-        </label>
-      </div>
+      <SectionHeader
+        headingId={`sleep-tracking-heading-${userProfileId}`}
+        headingLevel={2}
+        title="Sleep tracking"
+        description={`Review ${profileName}'s sleep sessions ending on ${formatLocalDate(selectedDate)}.`}
+        actions={(
+          <Field label="Sleep date" className="w-full sm:w-auto">
+            {(controlProps) => (
+              <input
+                {...controlProps}
+                className="min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus sm:w-auto"
+                disabled={mutating}
+                max={getTodayLocalDate()}
+                type="date"
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(event.target.value)}
+              />
+            )}
+          </Field>
+        )}
+      />
 
-      {isInitialLoading && (
-        <div
-          className="rounded-2xl border border-gray-200 bg-white px-4 py-5 text-sm text-gray-600 shadow-sm"
-          role="status"
-        >
-          Loading sleep tracking...
-        </div>
-      )}
+      {isInitialLoading && <LoadingState message="Loading sleep tracking..." />}
 
       {isRefreshing && (
-        <p className="px-1 text-sm text-gray-500" role="status">
+        <p className="px-1 text-sm text-app-secondary" role="status">
           Refreshing sleep tracking...
         </p>
       )}
 
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4" role="alert">
-          <p className="text-sm font-medium text-red-700">{error}</p>
-          <button
-            className="mt-2 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={mutating}
-            type="button"
-            onClick={reload}
-          >
-            Retry
-          </button>
-        </div>
+        <Alert
+          tone="error"
+          title="Unable to load sleep tracking"
+          action={<Button variant="secondary" size="compact" disabled={mutating} onClick={reload}>Retry</Button>}
+        >
+          {error}
+        </Alert>
       )}
 
       {actionError && (
-        <div
-          className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm font-medium text-red-700"
-          role="alert"
-        >
+        <Alert tone="error" title="Sleep action failed">
           {actionError}
-        </div>
+        </Alert>
       )}
 
       {actionSuccess && (
-        <div
-          className="rounded-2xl border border-green-200 bg-green-50 px-4 py-4 text-sm font-medium text-green-700"
-          role="status"
-        >
+        <Alert tone="success">
           {actionSuccess}
-        </div>
+        </Alert>
       )}
 
       {hasLoadedData && (
@@ -189,6 +185,17 @@ export default function SleepTrackingPanel({
           />
         </>
       )}
+
+      <ConfirmDialog
+        open={pendingDeleteEntryId !== null}
+        title="Delete sleep entry?"
+        description="This sleep entry will be permanently removed from the selected day. This action cannot be undone."
+        confirmLabel="Delete sleep entry"
+        confirmingLabel="Deleting sleep entry..."
+        confirming={mutating}
+        onCancel={() => setPendingDeleteEntryId(null)}
+        onConfirm={() => { void confirmDelete() }}
+      />
     </section>
   )
 }

@@ -1,6 +1,11 @@
+import { useId } from 'react'
 import HealthMetricForm from './HealthMetricForm'
 import HealthMetricHistory from './HealthMetricHistory'
 import HealthSummaryCard from './HealthSummaryCard'
+import { Alert } from './ui/Alert'
+import { Button } from './ui/Button'
+import { LoadingState } from './ui/LoadingState'
+import { SectionHeader } from './ui/SectionHeader'
 import { useHealthMetrics } from '../hooks/useHealthMetrics'
 import type { UserProfile } from '../types/UserProfile'
 
@@ -11,6 +16,9 @@ interface HealthMetricsPanelProps {
 
 export default function HealthMetricsPanel({ profile, onMetricSaved }: HealthMetricsPanelProps) {
   const { metrics, summary, loading, error, reload } = useHealthMetrics(profile.id)
+  const headingId = useId()
+  const hasLoadedData = summary !== null || metrics.length > 0
+  const initialLoading = loading && !hasLoadedData
 
   function handleMetricSaved() {
     reload()
@@ -18,31 +26,47 @@ export default function HealthMetricsPanel({ profile, onMetricSaved }: HealthMet
   }
 
   return (
-    <section className="space-y-4">
-      <div className="px-1">
-        <h3 className="text-lg font-semibold text-gray-900">{profile.name}&apos;s health metrics</h3>
-        <p className="mt-1 text-sm text-gray-500">Record today&apos;s weight and review your progress.</p>
-      </div>
+    <section aria-labelledby={headingId} className="min-w-0 space-y-5">
+      <SectionHeader
+        headingId={headingId}
+        headingLevel={2}
+        title="Weight and health metrics"
+        description={`Record today's weight and review calculated health information for ${profile.name}.`}
+      />
 
-      {loading && (
-        <div className="rounded-2xl border border-gray-200 bg-white px-4 py-5 text-sm text-gray-600 shadow-sm">
-          Loading health metrics...
-        </div>
-      )}
+      {initialLoading ? <LoadingState message="Loading health metrics..." /> : null}
 
-      {!loading && error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm font-medium text-red-700">
+      {!initialLoading && loading ? (
+        <LoadingState compact message="Refreshing health metrics..." />
+      ) : null}
+
+      {error ? (
+        <Alert
+          tone="error"
+          title="Unable to load health metrics"
+          action={(
+            <Button variant="secondary" size="compact" onClick={reload}>
+              Retry
+            </Button>
+          )}
+        >
           {error}
-        </div>
-      )}
+        </Alert>
+      ) : null}
 
-      {!loading && !error && (
+      {hasLoadedData ? (
         <>
-          {summary && <HealthSummaryCard summary={summary} />}
-          <HealthMetricForm userProfileId={profile.id} metrics={metrics} onSaved={handleMetricSaved} />
+          <div className="grid min-w-0 gap-5 xl:grid-cols-2 xl:items-start">
+            {summary ? <HealthSummaryCard summary={summary} /> : null}
+            <HealthMetricForm
+              userProfileId={profile.id}
+              metrics={metrics}
+              onSaved={handleMetricSaved}
+            />
+          </div>
           <HealthMetricHistory metrics={metrics} />
         </>
-      )}
+      ) : null}
     </section>
   )
 }
