@@ -6,45 +6,84 @@
   :root {
     color-scheme: light;
 
-    --color-app-background: 248 250 252;
-    --color-surface: 255 255 255;
-    --color-text-primary: 15 23 42;
-    --color-text-secondary: 71 85 105;
-    --color-border: 226 232 240;
+    /* HealthAITracker Signature — warm, calm application surfaces. */
+    --color-app-background: 243 244 238;
+    --color-surface: 255 253 249;
+    --color-surface-elevated: 255 255 252;
+    --color-text-primary: 34 49 41;
+    --color-text-secondary: 83 97 89;
+    --color-text-muted: 109 119 111;
+    --color-border: 220 226 217;
+    --color-border-muted: 233 237 230;
 
-    --color-primary-50: 240 253 244;
-    --color-primary-100: 220 252 231;
-    --color-primary-500: 34 197 94;
-    --color-primary-600: 22 163 74;
-    --color-primary-700: 21 128 61;
+    --color-primary-50: 239 246 239;
+    --color-primary-100: 226 239 228;
+    --color-primary-500: 78 139 102;
+    --color-primary-600: 62 119 89;
+    --color-primary-700: 53 104 77;
+    --color-primary: 62 119 89;
+    --color-primary-hover: 53 104 77;
+    --color-primary-pressed: 47 94 70;
 
-    --color-success: 21 128 61;
-    --color-success-surface: 240 253 244;
-    --color-success-border: 187 247 208;
-    --color-warning: 161 98 7;
-    --color-warning-surface: 255 251 235;
-    --color-warning-border: 253 230 138;
-    --color-error: 185 28 28;
-    --color-error-surface: 254 242 242;
-    --color-error-border: 254 202 202;
-    --color-information: 3 105 161;
-    --color-information-surface: 240 249 255;
-    --color-information-border: 186 230 253;
+    --color-profile-husband: 67 107 159;
+    --color-profile-husband-accent: 74 114 168;
+    --color-profile-husband-surface: 237 243 250;
+    --color-profile-wife: 114 89 148;
+    --color-profile-wife-accent: 123 100 162;
+    --color-profile-wife-surface: 242 238 247;
+    --color-profile-shared: 190 118 85;
+    --color-profile-shared-surface: 249 238 232;
 
-    --color-profile-husband: 29 78 216;
-    --color-profile-husband-surface: 239 246 255;
-    --color-profile-wife: 190 24 93;
-    --color-profile-wife-surface: 253 242 248;
-    --color-focus: 22 163 74;
+    --color-metric-nutrition: 99 132 95;
+    --color-metric-nutrition-surface: 240 245 236;
+    --color-metric-hydration: 90 131 163;
+    --color-metric-hydration-surface: 238 244 247;
+    --color-metric-activity: 167 109 62;
+    --color-metric-activity-surface: 248 241 233;
+    --color-metric-sleep: 120 99 145;
+    --color-metric-sleep-surface: 242 239 246;
+
+    --color-success: 47 112 73;
+    --color-success-surface: 239 247 241;
+    --color-success-border: 184 217 193;
+    --color-warning: 145 91 22;
+    --color-warning-surface: 252 247 233;
+    --color-warning-border: 231 208 151;
+    --color-error: 170 51 51;
+    --color-error-hover: 145 42 42;
+    --color-error-pressed: 124 35 35;
+    --color-error-surface: 253 241 239;
+    --color-error-border: 235 190 184;
+    --color-information: 52 104 142;
+    --color-information-surface: 239 246 249;
+    --color-information-border: 185 211 225;
+    --color-focus: 43 108 77;
+
+    --radius-card: 1rem;
+    --radius-control: 0.75rem;
+    --shadow-card: 0 1px 2px rgb(34 49 41 / 0.04), 0 8px 24px -20px rgb(34 49 41 / 0.24);
+    --shadow-elevated: 0 2px 5px rgb(34 49 41 / 0.06), 0 18px 42px -24px rgb(34 49 41 / 0.32);
+    --space-rhythm-sm: 0.75rem;
+    --space-rhythm: 1.5rem;
+    --space-rhythm-lg: 2rem;
+  }
+
+  html {
+    background: rgb(var(--color-app-background));
   }
 
   body {
-    @apply min-h-screen bg-app-background text-app-primary antialiased;
+    @apply min-h-screen bg-app-background font-sans text-app-primary antialiased;
   }
 
   :focus-visible {
-    outline: 2px solid rgb(var(--color-focus));
-    outline-offset: 2px;
+    outline: 3px solid rgb(var(--color-focus));
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: rgb(var(--color-primary-100));
+    color: rgb(var(--color-text-primary));
   }
 
   @media (prefers-reduced-motion: reduce) {

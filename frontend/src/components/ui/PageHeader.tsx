@@ -33,12 +33,12 @@ export function PageHeader({
       <div className="min-w-0">
         <Heading
           id={headingId}
-          className="break-words text-2xl font-bold tracking-tight text-app-primary sm:text-3xl"
+          className="break-words text-page-title text-app-primary"
         >
           {title}
         </Heading>
         {description ? (
-          <div className="mt-2 max-w-3xl break-words text-sm leading-6 text-app-secondary sm:text-base">
+          <div className="mt-2 max-w-3xl break-words text-supporting text-app-secondary sm:text-base">
             {description}
           </div>
         ) : null}

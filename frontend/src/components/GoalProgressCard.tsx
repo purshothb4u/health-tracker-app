@@ -1,37 +1,52 @@
 import type { GoalProgress } from '../types/Goal'
 import { Alert } from './ui/Alert'
 import { ProgressBar } from './ui/ProgressBar'
+import { StatusBadge } from './ui/StatusBadge'
 
 interface GoalProgressCardProps {
   progress: GoalProgress
 }
 
-export default function GoalProgressCard({ progress }: GoalProgressCardProps) {
-  if (!progress.progressAvailable) {
-    return (
-      <Alert tone="information" title="Progress unavailable">
-        {progress.message ?? 'Progress is currently unavailable.'}
-      </Alert>
-    )
-  }
+const numberFormatter = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 2 })
 
+export default function GoalProgressCard({ progress }: GoalProgressCardProps) {
   const percentageText = progress.progressPercentage === null
     ? 'Not available'
     : `${progress.progressPercentage.toFixed(2)}%`
+  const currentText = progress.progressAvailable && progress.currentValue !== null
+    ? `${numberFormatter.format(progress.currentValue)} ${progress.displayUnit}`
+    : 'Not available'
 
   return (
-    <div className="min-w-0 space-y-3 rounded-xl border border-app-border bg-slate-50 p-4">
-      <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <p className="break-words text-sm font-semibold text-app-primary">
-          {progress.currentValue ?? 'Not available'} / {progress.targetValue} {progress.displayUnit}
-        </p>
-        <p className="break-words text-sm text-app-secondary">
-          {percentageText} &middot; {progress.points} points
-        </p>
-      </div>
-      {progress.progressPercentage === null ? (
-        <p className="text-sm font-medium text-app-secondary" role="status">
-          Percentage is not available.
+    <div className="min-w-0 space-y-4 rounded-card border border-primary-100 bg-app-surface p-4 shadow-sm">
+      <dl className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="min-w-0 rounded-control bg-primary-50 px-3 py-3">
+          <dt className="text-metadata font-medium text-app-secondary">Current</dt>
+          <dd className="mt-1 break-words text-base font-bold tabular-nums text-app-primary">
+            {currentText}
+          </dd>
+        </div>
+        <div className="min-w-0 rounded-control bg-app-background px-3 py-3">
+          <dt className="text-metadata font-medium text-app-secondary">Target</dt>
+          <dd className="mt-1 break-words text-base font-bold tabular-nums text-app-primary">
+            {numberFormatter.format(progress.targetValue)} {progress.displayUnit}
+          </dd>
+        </div>
+        <div className="min-w-0 rounded-control bg-app-background px-3 py-3">
+          <dt className="text-metadata font-medium text-app-secondary">Points</dt>
+          <dd className="mt-1 break-words text-base font-bold tabular-nums text-app-primary">
+            {numberFormatter.format(progress.points)}
+          </dd>
+        </div>
+      </dl>
+
+      {!progress.progressAvailable ? (
+        <Alert tone="information" title="Progress unavailable">
+          {progress.message ?? 'Progress is currently unavailable.'}
+        </Alert>
+      ) : progress.progressPercentage === null ? (
+        <p className="text-supporting font-medium text-app-secondary" role="status">
+          Goal progress: Not available
         </p>
       ) : (
         <ProgressBar
@@ -39,16 +54,18 @@ export default function GoalProgressCard({ progress }: GoalProgressCardProps) {
           maximum={100}
           label="Goal progress"
           valueText={percentageText}
+          tone="primary"
         />
       )}
-      {progress.goalReached === true ? (
-        <p className="text-sm font-medium text-success">Target reached.</p>
-      ) : null}
-      {progress.goalReached === false ? (
-        <p className="text-sm font-medium text-app-secondary">Target not yet reached.</p>
-      ) : null}
-      {progress.message ? (
-        <p className="break-words text-sm text-app-secondary">{progress.message}</p>
+
+      {progress.progressAvailable ? (
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {progress.goalReached === true ? <StatusBadge tone="success">Target reached</StatusBadge> : null}
+          {progress.goalReached === false ? <StatusBadge tone="neutral">In progress</StatusBadge> : null}
+          {progress.message ? (
+            <p className="min-w-0 flex-1 break-words text-supporting text-app-secondary">{progress.message}</p>
+          ) : null}
+        </div>
       ) : null}
     </div>
   )

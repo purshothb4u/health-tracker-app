@@ -151,18 +151,15 @@ export function useActivityTracking(userProfileId: number | null): UseActivityTr
   const beginMutation = useCallback(() => {
     if (userProfileId === null) {
       const profileError = new Error('A user profile is required for activity tracking')
-      setError(profileError.message)
       throw profileError
     }
     if (mutationInProgress.current) {
       const mutationError = new Error('An activity tracking update is already in progress')
-      setError(mutationError.message)
       throw mutationError
     }
 
     mutationInProgress.current = true
     setMutating(true)
-    setError(null)
     return userProfileId
   }, [userProfileId])
 
@@ -170,7 +167,6 @@ export function useActivityTracking(userProfileId: number | null): UseActivityTr
     async (data: ActivityEntryRequest): Promise<ActivityEntry> => {
       const dateError = validateSelectedDate(data.activityDate)
       if (dateError !== null) {
-        setError(dateError)
         throw new Error(dateError)
       }
 
@@ -179,9 +175,6 @@ export function useActivityTracking(userProfileId: number | null): UseActivityTr
         const entry = await createActivityEntry(selectedUserProfileId, data)
         reload()
         return entry
-      } catch (err) {
-        setError(getErrorMessage(err, 'Failed to create activity entry'))
-        throw err
       } finally {
         mutationInProgress.current = false
         setMutating(false)
@@ -194,7 +187,6 @@ export function useActivityTracking(userProfileId: number | null): UseActivityTr
     async (activityEntryId: number, data: ActivityEntryRequest): Promise<ActivityEntry> => {
       const dateError = validateSelectedDate(data.activityDate)
       if (dateError !== null) {
-        setError(dateError)
         throw new Error(dateError)
       }
 
@@ -203,9 +195,6 @@ export function useActivityTracking(userProfileId: number | null): UseActivityTr
         const entry = await updateActivityEntry(selectedUserProfileId, activityEntryId, data)
         reload()
         return entry
-      } catch (err) {
-        setError(getErrorMessage(err, 'Failed to update activity entry'))
-        throw err
       } finally {
         mutationInProgress.current = false
         setMutating(false)
@@ -220,9 +209,6 @@ export function useActivityTracking(userProfileId: number | null): UseActivityTr
       try {
         await deleteActivityEntry(selectedUserProfileId, activityEntryId)
         reload()
-      } catch (err) {
-        setError(getErrorMessage(err, 'Failed to delete activity entry'))
-        throw err
       } finally {
         mutationInProgress.current = false
         setMutating(false)
@@ -231,11 +217,16 @@ export function useActivityTracking(userProfileId: number | null): UseActivityTr
     [beginMutation, reload],
   )
 
+  const dataMatchesContext = summary !== null
+    && userProfileId !== null
+    && summary.userProfileId === userProfileId
+    && summary.activityDate === selectedDate
+
   return {
     selectedDate,
     setSelectedDate,
-    entries,
-    summary,
+    entries: dataMatchesContext ? entries : [],
+    summary: dataMatchesContext ? summary : null,
     loading,
     mutating,
     error,

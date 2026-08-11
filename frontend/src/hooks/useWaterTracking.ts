@@ -154,18 +154,15 @@ export function useWaterTracking(userProfileId: number | null): UseWaterTracking
   const beginMutation = useCallback(() => {
     if (userProfileId === null) {
       const profileError = new Error('A user profile is required for water tracking')
-      setError(profileError.message)
       throw profileError
     }
     if (mutationInProgress.current) {
       const mutationError = new Error('A water tracking update is already in progress')
-      setError(mutationError.message)
       throw mutationError
     }
 
     mutationInProgress.current = true
     setMutating(true)
-    setError(null)
     return userProfileId
   }, [userProfileId])
 
@@ -173,7 +170,6 @@ export function useWaterTracking(userProfileId: number | null): UseWaterTracking
     async (data: WaterEntryRequest): Promise<WaterEntry> => {
       const dateError = validateSelectedDate(data.entryDate)
       if (dateError !== null) {
-        setError(dateError)
         throw new Error(dateError)
       }
 
@@ -182,9 +178,6 @@ export function useWaterTracking(userProfileId: number | null): UseWaterTracking
         const entry = await createWaterEntry(selectedUserProfileId, data)
         reload()
         return entry
-      } catch (err) {
-        setError(getErrorMessage(err, 'Failed to create water entry'))
-        throw err
       } finally {
         mutationInProgress.current = false
         setMutating(false)
@@ -197,7 +190,6 @@ export function useWaterTracking(userProfileId: number | null): UseWaterTracking
     async (waterEntryId: number, data: WaterEntryRequest): Promise<WaterEntry> => {
       const dateError = validateSelectedDate(data.entryDate)
       if (dateError !== null) {
-        setError(dateError)
         throw new Error(dateError)
       }
 
@@ -206,9 +198,6 @@ export function useWaterTracking(userProfileId: number | null): UseWaterTracking
         const entry = await updateWaterEntry(selectedUserProfileId, waterEntryId, data)
         reload()
         return entry
-      } catch (err) {
-        setError(getErrorMessage(err, 'Failed to update water entry'))
-        throw err
       } finally {
         mutationInProgress.current = false
         setMutating(false)
@@ -223,9 +212,6 @@ export function useWaterTracking(userProfileId: number | null): UseWaterTracking
       try {
         await deleteWaterEntry(selectedUserProfileId, waterEntryId)
         reload()
-      } catch (err) {
-        setError(getErrorMessage(err, 'Failed to delete water entry'))
-        throw err
       } finally {
         mutationInProgress.current = false
         setMutating(false)
@@ -241,9 +227,6 @@ export function useWaterTracking(userProfileId: number | null): UseWaterTracking
         const updatedGoal = await updateWaterGoal(selectedUserProfileId, data)
         reload()
         return updatedGoal
-      } catch (err) {
-        setError(getErrorMessage(err, 'Failed to update water goal'))
-        throw err
       } finally {
         mutationInProgress.current = false
         setMutating(false)
@@ -252,12 +235,18 @@ export function useWaterTracking(userProfileId: number | null): UseWaterTracking
     [beginMutation, reload],
   )
 
+  const dataMatchesContext = goal !== null
+    && summary !== null
+    && userProfileId !== null
+    && goal.userProfileId === userProfileId
+    && summary.entryDate === selectedDate
+
   return {
     selectedDate,
     setSelectedDate,
-    entries,
-    goal,
-    summary,
+    entries: dataMatchesContext ? entries : [],
+    goal: dataMatchesContext ? goal : null,
+    summary: dataMatchesContext ? summary : null,
     loading,
     mutating,
     error,

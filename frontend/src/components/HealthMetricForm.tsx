@@ -2,10 +2,12 @@ import { useEffect, useId, useState, type FormEvent } from 'react'
 import { ApiError } from '../api/client'
 import { createHealthMetric, updateHealthMetric } from '../api/healthMetricApi'
 import type { HealthMetric, HealthMetricRequest } from '../types/HealthMetric'
+import TrackingIcon from './TrackingIcon'
 import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
 import { Field } from './ui/Field'
+import { IconContainer } from './ui/IconContainer'
 import { SectionHeader } from './ui/SectionHeader'
 import { StatusBadge } from './ui/StatusBadge'
 
@@ -16,10 +18,10 @@ interface HealthMetricFormProps {
 }
 
 const inputClasses = [
-  'min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2',
-  'text-app-primary shadow-sm outline-none placeholder:text-slate-400',
-  'focus:border-primary-500 focus:ring-2 focus:ring-focus/20',
-  'disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-app-secondary',
+  'min-h-11 w-full rounded-control border border-app-border bg-app-surface px-3 py-2',
+  'text-app-primary shadow-sm outline-none placeholder:text-app-muted',
+  'focus-visible:border-focus focus-visible:ring-2 focus-visible:ring-focus',
+  'disabled:cursor-not-allowed disabled:bg-app-border-muted disabled:text-app-secondary',
 ].join(' ')
 
 function getTodayDate(): string {
@@ -92,18 +94,31 @@ export default function HealthMetricForm({
   }
 
   return (
-    <Card as="section" padding="normal" aria-labelledby={headingId}>
-      <SectionHeader
-        headingId={headingId}
-        headingLevel={3}
-        title="Today's weight"
-        description={todayMetric ? "Update today's recorded weight." : 'Record a weight for today.'}
-        actions={(
-          <StatusBadge tone={todayMetric ? 'information' : 'neutral'}>
-            {todayMetric ? 'Editing today' : 'New entry'}
-          </StatusBadge>
-        )}
-      />
+    <Card
+      as="section"
+      padding="normal"
+      aria-labelledby={headingId}
+      className={todayMetric ? 'border-information-border bg-information-surface/20' : undefined}
+    >
+      <div className="flex min-w-0 items-start gap-3">
+        <IconContainer aria-hidden="true" tone="primary">
+          <TrackingIcon name="plus" />
+        </IconContainer>
+        <SectionHeader
+          className="min-w-0 flex-1"
+          headingId={headingId}
+          headingLevel={3}
+          title="Today's weight"
+          description={todayMetric
+            ? "A weight entry already exists for today. Saving will update that entry."
+            : 'Record a new weight entry for today.'}
+          actions={(
+            <StatusBadge tone={todayMetric ? 'information' : 'neutral'}>
+              {todayMetric ? 'Editing today' : 'New entry'}
+            </StatusBadge>
+          )}
+        />
+      </div>
 
       <form className="mt-5" onSubmit={handleSubmit} noValidate>
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
@@ -134,12 +149,11 @@ export default function HealthMetricForm({
 
           <Field label="Notes" optional hint="Up to 500 characters.">
             {(fieldProps) => (
-              <input
+              <textarea
                 {...fieldProps}
-                className={inputClasses}
+                className={`${inputClasses} min-h-24 resize-y`}
                 disabled={saving}
                 maxLength={500}
-                type="text"
                 value={notes}
                 onChange={(event) => {
                   setNotes(event.target.value)

@@ -3,8 +3,10 @@ import { GOAL_STATUS_LABELS, GOAL_TYPE_LABELS } from '../types/Goal'
 import { formatLocalDate } from '../utils/dateFormatting'
 import GoalCheckInControl from './GoalCheckInControl'
 import GoalProgressCard from './GoalProgressCard'
+import TrackingIcon from './TrackingIcon'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
+import { IconContainer } from './ui/IconContainer'
 import { LoadingState } from './ui/LoadingState'
 import { StatusBadge, type StatusBadgeTone } from './ui/StatusBadge'
 
@@ -28,19 +30,32 @@ export default function GoalCard({ goal, progress, mutating, onEdit, onStatus, o
   const active = goal.status === 'ACTIVE'
 
   return (
-    <Card as="article" padding="normal" className="min-w-0 space-y-5">
+    <Card
+      as="article"
+      padding="normal"
+      elevated={active}
+      className={active
+        ? 'min-w-0 space-y-5 border-primary-100 bg-primary-50/55'
+        : 'min-w-0 space-y-5 border-app-border-muted bg-app-surface'}
+    >
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h3 className="break-words text-lg font-semibold text-app-primary">{goal.title}</h3>
-          <p className="mt-1 break-words text-sm leading-6 text-app-secondary">
-            {GOAL_TYPE_LABELS[goal.goalType]} &middot; {formatLocalDate(goal.startDate)} to {formatLocalDate(goal.endDate)}
-          </p>
+        <div className="flex min-w-0 items-start gap-3">
+          <IconContainer aria-hidden="true" tone="primary">
+            <TrackingIcon name="target" />
+          </IconContainer>
+          <div className="min-w-0">
+            <p className="text-metadata font-semibold text-primary-700">{GOAL_TYPE_LABELS[goal.goalType]}</p>
+            <h3 className="mt-1 break-words text-card-title text-app-primary">{goal.title}</h3>
+            <p className="mt-1 break-words text-supporting text-app-secondary">
+              {formatLocalDate(goal.startDate)} to {formatLocalDate(goal.endDate)}
+            </p>
+          </div>
         </div>
         <StatusBadge tone={statusTone(goal.status)}>{GOAL_STATUS_LABELS[goal.status]}</StatusBadge>
       </div>
 
       {goal.notes ? (
-        <p className="whitespace-pre-wrap break-words text-sm leading-6 text-app-secondary">
+        <p className="rounded-control border border-app-border-muted bg-app-surface/80 px-4 py-3 whitespace-pre-wrap break-words text-supporting text-app-secondary">
           {goal.notes}
         </p>
       ) : null}
@@ -60,7 +75,7 @@ export default function GoalCard({ goal, progress, mutating, onEdit, onStatus, o
         />
       ) : null}
 
-      <div className="flex flex-col gap-2 border-t border-app-border pt-4 sm:flex-row sm:flex-wrap" aria-label={`Actions for ${goal.title}`}>
+      <div className="flex flex-col gap-2 border-t border-app-border-muted pt-4 sm:flex-row sm:flex-wrap" role="group" aria-label={`Actions for ${goal.title}`}>
         {active ? (
           <Button variant="secondary" disabled={mutating} aria-label={`Edit ${goal.title}`} onClick={() => onEdit(goal)}>
             Edit

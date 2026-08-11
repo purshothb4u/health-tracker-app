@@ -35,12 +35,12 @@ export function SectionHeader({
       <div className="min-w-0">
         <Heading
           id={resolvedHeadingId}
-          className="break-words text-lg font-semibold text-app-primary sm:text-xl"
+          className="break-words text-section-title text-app-primary"
         >
           {title}
         </Heading>
         {description ? (
-          <div className="mt-1 break-words text-sm leading-6 text-app-secondary">
+          <div className="mt-1.5 break-words text-supporting text-app-secondary">
             {description}
           </div>
         ) : null}

@@ -1,11 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import type { FoodEntry, FoodEntryRequest, MealType } from '../types/FoodEntry'
 import { formatLocalDate } from '../utils/dateFormatting'
+import TrackingIcon from './TrackingIcon'
 import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
 import { Field } from './ui/Field'
+import { IconContainer } from './ui/IconContainer'
 import { SectionHeader } from './ui/SectionHeader'
+import { StatusBadge } from './ui/StatusBadge'
 
 interface FoodEntryFormProps {
   selectedDate: string
@@ -17,7 +20,7 @@ interface FoodEntryFormProps {
 }
 
 const mealTypes: MealType[] = ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK']
-const controlClassName = 'min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70'
+const controlClassName = 'min-h-11 w-full rounded-control border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus-visible:border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:bg-app-border-muted disabled:opacity-70'
 
 function emptyFormValues() {
   return {
@@ -136,21 +139,32 @@ export default function FoodEntryForm({
   }
 
   return (
-    <Card as="section" padding="normal" aria-labelledby="food-entry-form-heading">
+    <Card
+      as="section"
+      padding="normal"
+      aria-labelledby="food-entry-form-heading"
+      className={isEditing ? 'border-information-border bg-information-surface/20' : undefined}
+    >
       <form aria-describedby={error ? 'food-entry-form-error' : undefined} onSubmit={handleSubmit}>
-        <SectionHeader
-          headingId="food-entry-form-heading"
-          headingLevel={3}
-          title={isEditing ? 'Edit food entry' : 'Add food entry'}
-          description={`${isEditing ? 'Update' : 'Record'} food for ${formatLocalDate(selectedDate)}.`}
-          actions={isEditing ? (
-            <Button variant="secondary" disabled={mutating} onClick={onCancelEdit}>
-              Cancel edit
-            </Button>
-          ) : undefined}
-        />
+        <div className="flex min-w-0 items-start gap-3">
+          <IconContainer aria-hidden="true" tone="nutrition">
+            <TrackingIcon name={isEditing ? 'nutrition' : 'plus'} />
+          </IconContainer>
+          <SectionHeader
+            className="min-w-0 flex-1"
+            headingId="food-entry-form-heading"
+            headingLevel={3}
+            title={isEditing ? 'Edit food entry' : 'Add food entry'}
+            description={`${isEditing ? 'Update' : 'Record'} food for ${formatLocalDate(selectedDate)}.`}
+            actions={(
+              <StatusBadge tone={isEditing ? 'information' : 'nutrition'}>
+                {isEditing ? 'Editing entry' : 'New entry'}
+              </StatusBadge>
+            )}
+          />
+        </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="mt-5 grid gap-4 sm:grid-cols-[minmax(10rem,0.7fr)_minmax(0,1.3fr)]">
           <Field label="Meal" required>
             {(controlProps) => (
               <select {...controlProps} className={controlClassName} disabled={mutating} value={formValues.mealType} onChange={(event) => updateField('mealType', event.target.value)}>
@@ -165,6 +179,9 @@ export default function FoodEntryForm({
               <input {...controlProps} className={controlClassName} disabled={mutating} maxLength={150} type="text" value={formValues.foodName} onChange={(event) => updateField('foodName', event.target.value)} />
             )}
           </Field>
+        </div>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Field label="Quantity" required hint="Enter an amount greater than zero.">
             {(controlProps) => (
               <input {...controlProps} className={controlClassName} disabled={mutating} inputMode="decimal" min="0.01" step="0.01" type="number" value={formValues.quantity} onChange={(event) => updateField('quantity', event.target.value)} />
@@ -177,20 +194,24 @@ export default function FoodEntryForm({
           </Field>
         </div>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {([
-            ['Calories', 'calories'],
-            ['Protein (g)', 'proteinGrams'],
-            ['Carbohydrates (g)', 'carbohydrateGrams'],
-            ['Fat (g)', 'fatGrams'],
-          ] as const).map(([label, field]) => (
-            <Field key={field} label={label} required hint="Zero or greater.">
-              {(controlProps) => (
-                <input {...controlProps} className={controlClassName} disabled={mutating} inputMode="decimal" min="0" step="0.01" type="number" value={formValues[field]} onChange={(event) => updateField(field, event.target.value)} />
-              )}
-            </Field>
-          ))}
-        </div>
+        <fieldset className="mt-5 min-w-0 rounded-control border border-app-border-muted bg-app-background/45 p-4">
+          <legend className="px-1 text-label text-app-primary">Nutrition values</legend>
+          <p className="mb-4 text-metadata text-app-secondary">Enter zero when a logged food has none of a nutrient.</p>
+          <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {([
+              ['Calories', 'calories'],
+              ['Protein (g)', 'proteinGrams'],
+              ['Carbohydrates (g)', 'carbohydrateGrams'],
+              ['Fat (g)', 'fatGrams'],
+            ] as const).map(([label, field]) => (
+              <Field key={field} label={label} required hint="Zero or greater.">
+                {(controlProps) => (
+                  <input {...controlProps} className={controlClassName} disabled={mutating} inputMode="decimal" min="0" step="0.01" type="number" value={formValues[field]} onChange={(event) => updateField(field, event.target.value)} />
+                )}
+              </Field>
+            ))}
+          </div>
+        </fieldset>
 
         <Field className="mt-4" label="Notes" optional hint="Up to 500 characters.">
           {(controlProps) => (
@@ -200,9 +221,16 @@ export default function FoodEntryForm({
 
         {error ? <Alert id="food-entry-form-error" className="mt-4" tone="error" title="Check the food entry">{error}</Alert> : null}
 
-        <Button className="mt-5" disabled={mutating} fullWidth type="submit">
-          {mutating ? 'Saving food entry...' : isEditing ? 'Update food entry' : 'Add food entry'}
-        </Button>
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
+          {isEditing ? (
+            <Button variant="secondary" disabled={mutating} fullWidth className="sm:w-auto" onClick={onCancelEdit}>
+              Cancel edit
+            </Button>
+          ) : null}
+          <Button disabled={mutating} fullWidth className="sm:w-auto" type="submit">
+            {mutating ? 'Saving food entry...' : isEditing ? 'Update food entry' : 'Add food entry'}
+          </Button>
+        </div>
       </form>
     </Card>
   )

@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import type { Goal, GoalRequest, GoalType } from '../types/Goal'
 import { GOAL_TYPE_LABELS } from '../types/Goal'
+import TrackingIcon from './TrackingIcon'
 import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
 import { Field } from './ui/Field'
+import { IconContainer } from './ui/IconContainer'
 import { SectionHeader } from './ui/SectionHeader'
+import { StatusBadge } from './ui/StatusBadge'
 
 interface GoalFormProps {
   editingGoal: Goal | null
@@ -83,28 +86,34 @@ export default function GoalForm({ editingGoal, mutating, onCancel, onSubmit }: 
         customUnit: goalType === 'CUSTOM_CHECK_IN' ? customUnit || null : null,
         notes: notes || null,
       })
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Failed to save goal.')
+    } catch {
+      // The profile-scoped goals panel presents API errors from the shared hook.
     }
   }
 
-  const inputClass = 'min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-app-secondary'
+  const inputClass = 'min-h-11 w-full min-w-0 rounded-control border border-app-border bg-app-surface px-3 py-2 text-sm text-app-primary shadow-sm focus-visible:border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:bg-app-border-muted disabled:text-app-secondary'
 
   return (
-    <Card padding="normal" className="min-w-0 border-primary-200 bg-primary-50/30">
-      <SectionHeader
-        headingId="personal-goal-form-heading"
-        headingLevel={3}
-        title={editingGoal ? 'Edit personal goal' : 'Create personal goal'}
-        description={editingGoal
-          ? 'Goal type remains fixed while editing.'
-          : 'Set a measurable target for the selected profile.'}
-        actions={(
-          <Button variant="secondary" disabled={mutating} onClick={onCancel}>
-            {editingGoal ? 'Cancel edit' : 'Cancel'}
-          </Button>
-        )}
-      />
+    <Card padding="normal" className="min-w-0 border-primary-100 bg-app-surface">
+      <div className="flex min-w-0 items-start gap-3">
+        <IconContainer aria-hidden="true" tone="primary">
+          <TrackingIcon name={editingGoal ? 'target' : 'plus'} />
+        </IconContainer>
+        <SectionHeader
+          className="min-w-0 flex-1"
+          headingId="personal-goal-form-heading"
+          headingLevel={3}
+          title={editingGoal ? 'Edit personal goal' : 'Create personal goal'}
+          description={editingGoal
+            ? 'Goal type remains fixed while editing.'
+            : 'Set a measurable target for the selected profile.'}
+          actions={(
+            <StatusBadge tone={editingGoal ? 'information' : 'neutral'}>
+              {editingGoal ? 'Editing goal' : 'New goal'}
+            </StatusBadge>
+          )}
+        />
+      </div>
       <form
         className="mt-5 space-y-5"
         aria-describedby={formError ? 'personal-goal-form-error' : undefined}
@@ -160,9 +169,14 @@ export default function GoalForm({ editingGoal, mutating, onCancel, onSubmit }: 
           </Field>
         </div>
         {formError ? <Alert id="personal-goal-form-error" tone="error" title="Unable to save goal">{formError}</Alert> : null}
-        <Button className="w-full sm:w-auto" disabled={mutating} type="submit">
-          {mutating ? 'Saving goal...' : editingGoal ? 'Save goal changes' : 'Create goal'}
-        </Button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <Button variant="secondary" className="w-full sm:w-auto" disabled={mutating} onClick={onCancel}>
+            {editingGoal ? 'Cancel edit' : 'Cancel'}
+          </Button>
+          <Button className="w-full sm:w-auto" disabled={mutating} type="submit">
+            {mutating ? 'Saving goal...' : editingGoal ? 'Save goal changes' : 'Create goal'}
+          </Button>
+        </div>
       </form>
     </Card>
   )

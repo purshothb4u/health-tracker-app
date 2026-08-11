@@ -106,7 +106,7 @@ export function ConfirmDialog({
       aria-busy={confirming}
       aria-describedby={descriptionId}
       aria-labelledby={titleId}
-      className="m-auto w-[calc(100%-2rem)] max-w-lg overflow-hidden rounded-card border border-app-border bg-app-surface p-0 text-app-primary shadow-xl backdrop:bg-slate-950/50"
+      className="m-auto w-[calc(100%-2rem)] max-w-lg overflow-hidden rounded-card border border-app-border-muted bg-app-surface-elevated p-0 text-app-primary shadow-elevated backdrop:bg-app-primary/45"
       onCancel={(event) => {
         event.preventDefault()
         handleCancel()
@@ -118,10 +118,10 @@ export function ConfirmDialog({
       }}
     >
       <div className="max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6">
-        <h2 id={titleId} className="break-words text-xl font-semibold text-app-primary">
+        <h2 id={titleId} className="break-words text-section-title text-app-primary">
           {title}
         </h2>
-        <div id={descriptionId} className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-app-secondary">
+        <div id={descriptionId} className="mt-2 whitespace-pre-wrap break-words text-supporting text-app-secondary">
           {description}
         </div>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">

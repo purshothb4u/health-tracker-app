@@ -66,6 +66,10 @@ function parseLocalDate(value: string): Date | null {
     : null
 }
 
+function getUtcDayNumber(date: Date): number {
+  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / MILLISECONDS_PER_DAY
+}
+
 function validateDateRange(fromDate: string, toDate: string): string | null {
   if (!fromDate) {
     return 'From date is required.'
@@ -88,7 +92,7 @@ function validateDateRange(fromDate: string, toDate: string): string | null {
     return 'To date must not be in the future.'
   }
 
-  const inclusiveDays = Math.floor((to.getTime() - from.getTime()) / MILLISECONDS_PER_DAY) + 1
+  const inclusiveDays = getUtcDayNumber(to) - getUtcDayNumber(from) + 1
   return inclusiveDays > MAXIMUM_RANGE_DAYS
     ? 'Analytics date range must not exceed 365 days.'
     : null
@@ -119,22 +123,26 @@ export function useAnalytics(userProfileId: number | null): UseAnalyticsResult {
     setFromDateState(range.fromDate)
     setToDateState(range.toDate)
     setSelectedPreset(preset)
+    setError(null)
   }, [])
 
   const setCustomRange = useCallback((nextFromDate: string, nextToDate: string) => {
     setFromDateState(nextFromDate)
     setToDateState(nextToDate)
     setSelectedPreset('CUSTOM')
+    setError(null)
   }, [])
 
   const setFromDate = useCallback((nextFromDate: string) => {
     setFromDateState(nextFromDate)
     setSelectedPreset('CUSTOM')
+    setError(null)
   }, [])
 
   const setToDate = useCallback((nextToDate: string) => {
     setToDateState(nextToDate)
     setSelectedPreset('CUSTOM')
+    setError(null)
   }, [])
 
   useEffect(() => {

@@ -5,10 +5,12 @@ import { formatLocalDate } from '../utils/dateFormatting'
 import ActivityEntryForm from './ActivityEntryForm'
 import ActivityEntryHistory from './ActivityEntryHistory'
 import DailyActivitySummaryCard from './DailyActivitySummaryCard'
+import TrackingIcon from './TrackingIcon'
 import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 import { Field } from './ui/Field'
+import { IconContainer } from './ui/IconContainer'
 import { LoadingState } from './ui/LoadingState'
 import { SectionHeader } from './ui/SectionHeader'
 
@@ -112,18 +114,25 @@ export default function ActivityTrackingPanel({
   const isRefreshing = loading && hasLoadedData
 
   return (
-    <section className="min-w-0 space-y-4" aria-labelledby={`activity-tracking-heading-${userProfileId}`}>
+    <section className="min-w-0 space-y-5" aria-labelledby={`activity-tracking-heading-${userProfileId}`}>
       <SectionHeader
         headingId={`activity-tracking-heading-${userProfileId}`}
         headingLevel={2}
-        title="Exercise and activity tracking"
+        title={(
+          <span className="flex min-w-0 items-center gap-3">
+            <IconContainer aria-hidden="true" tone="activity" size="large">
+              <TrackingIcon name="activity" />
+            </IconContainer>
+            <span className="break-words">Move — Activity</span>
+          </span>
+        )}
         description={`Review ${profileName}'s recorded activity for ${formatLocalDate(selectedDate)}.`}
         actions={(
           <Field label="Activity date" className="w-full sm:w-auto">
             {(controlProps) => (
               <input
                 {...controlProps}
-                className="min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus sm:w-auto"
+                className="min-h-11 w-full rounded-control border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus-visible:border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
                 disabled={mutating}
                 max={getTodayLocalDate()}
                 type="date"
@@ -137,11 +146,7 @@ export default function ActivityTrackingPanel({
 
       {isInitialLoading && <LoadingState message="Loading activity tracking..." />}
 
-      {isRefreshing && (
-        <p className="px-1 text-sm text-app-secondary" role="status">
-          Refreshing activity tracking...
-        </p>
-      )}
+      {isRefreshing && <LoadingState compact message="Refreshing activity tracking..." />}
 
       {error && (
         <Alert
@@ -168,21 +173,23 @@ export default function ActivityTrackingPanel({
       {hasLoadedData && (
         <>
           {summary && <DailyActivitySummaryCard summary={summary} />}
-          <ActivityEntryForm
-            editingEntry={editingEntry}
-            mutating={mutating}
-            selectedDate={selectedDate}
-            onActionStart={beginAction}
-            onCancelEdit={() => setEditingEntry(null)}
-            onCreate={handleCreate}
-            onUpdate={handleUpdate}
-          />
-          <ActivityEntryHistory
-            entries={entries}
-            mutating={mutating}
-            onDelete={handleDelete}
-            onEdit={handleEdit}
-          />
+          <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(21rem,0.92fr)_minmax(0,1.08fr)] xl:items-start">
+            <ActivityEntryForm
+              editingEntry={editingEntry}
+              mutating={mutating}
+              selectedDate={selectedDate}
+              onActionStart={beginAction}
+              onCancelEdit={() => setEditingEntry(null)}
+              onCreate={handleCreate}
+              onUpdate={handleUpdate}
+            />
+            <ActivityEntryHistory
+              entries={entries}
+              mutating={mutating}
+              onDelete={handleDelete}
+              onEdit={handleEdit}
+            />
+          </div>
         </>
       )}
 

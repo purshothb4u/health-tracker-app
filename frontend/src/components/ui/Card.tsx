@@ -7,6 +7,7 @@ type CardPadding = 'none' | 'compact' | 'normal'
 export interface CardProps extends HTMLAttributes<HTMLElement> {
   as?: CardElement
   padding?: CardPadding
+  elevated?: boolean
 }
 
 const paddingClasses: Record<CardPadding, string> = {
@@ -18,6 +19,7 @@ const paddingClasses: Record<CardPadding, string> = {
 export function Card({
   as: Component = 'div',
   padding = 'none',
+  elevated = false,
   className,
   ...props
 }: CardProps) {
@@ -25,6 +27,8 @@ export function Card({
     <Component
       className={classNames(
         'rounded-card border border-app-border bg-app-surface shadow-card',
+        'transition-[border-color,box-shadow] duration-150 motion-reduce:transition-none',
+        elevated && 'border-app-border-muted bg-app-surface-elevated shadow-elevated',
         paddingClasses[padding],
         className,
       )}
@@ -74,7 +78,7 @@ export function CardFooter({
   return (
     <div
       className={classNames(
-        'border-t border-app-border',
+        'border-t border-app-border-muted',
         padding === 'compact' ? 'px-4 py-3' : 'px-5 py-4 sm:px-6',
         className,
       )}
@@ -100,12 +104,12 @@ export function SummaryCard({
 }: SummaryCardProps) {
   return (
     <Card padding="normal" className={classNames('min-w-0', className)} {...props}>
-      <p className="text-sm font-medium text-app-secondary">{label}</p>
-      <p className="mt-2 break-words text-2xl font-semibold tracking-tight text-app-primary">
+      <p className="text-label text-app-secondary">{label}</p>
+      <p className="mt-2 break-words text-metric-value tabular-nums text-app-primary">
         {value}
       </p>
       {supportingText ? (
-        <div className="mt-2 break-words text-sm leading-6 text-app-secondary">
+        <div className="mt-2 break-words text-supporting text-app-secondary">
           {supportingText}
         </div>
       ) : null}

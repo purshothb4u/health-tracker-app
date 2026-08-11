@@ -3,6 +3,7 @@ import { useWaterTracking } from '../hooks/useWaterTracking'
 import type { WaterEntry, WaterEntryRequest, WaterGoal, WaterGoalRequest } from '../types/WaterTracking'
 import { formatLocalDate } from '../utils/dateFormatting'
 import HydrationSummaryCard from './HydrationSummaryCard'
+import TrackingIcon from './TrackingIcon'
 import WaterEntryForm from './WaterEntryForm'
 import WaterEntryHistory from './WaterEntryHistory'
 import WaterGoalEditor from './WaterGoalEditor'
@@ -11,6 +12,7 @@ import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 import { Field } from './ui/Field'
+import { IconContainer } from './ui/IconContainer'
 import { LoadingState } from './ui/LoadingState'
 import { SectionHeader } from './ui/SectionHeader'
 
@@ -101,6 +103,7 @@ export default function WaterTrackingPanel({ userProfileId, profileName }: Water
   }
 
   async function handleCreate(data: WaterEntryRequest): Promise<WaterEntry> {
+    setActionError(null)
     setSuccessMessage(null)
     const createdEntry = await createEntry(data)
     setSuccessMessage('Water entry added.')
@@ -108,6 +111,7 @@ export default function WaterTrackingPanel({ userProfileId, profileName }: Water
   }
 
   async function handleUpdate(waterEntryId: number, data: WaterEntryRequest): Promise<WaterEntry> {
+    setActionError(null)
     setSuccessMessage(null)
     const updatedEntry = await updateEntry(waterEntryId, data)
     setSuccessMessage('Water entry updated.')
@@ -115,6 +119,7 @@ export default function WaterTrackingPanel({ userProfileId, profileName }: Water
   }
 
   async function handleGoalUpdate(data: WaterGoalRequest): Promise<WaterGoal> {
+    setActionError(null)
     setSuccessMessage(null)
     const updatedGoal = await updateGoal(data)
     setSuccessMessage('Daily water goal saved.')
@@ -126,18 +131,25 @@ export default function WaterTrackingPanel({ userProfileId, profileName }: Water
   const isRefreshing = loading && hasLoadedData
 
   return (
-    <section className="min-w-0 space-y-4" aria-labelledby={`water-tracking-heading-${userProfileId}`}>
+    <section className="min-w-0 space-y-5" aria-labelledby={`water-tracking-heading-${userProfileId}`}>
       <SectionHeader
         headingId={`water-tracking-heading-${userProfileId}`}
         headingLevel={2}
-        title="Hydration and water tracking"
+        title={(
+          <span className="flex min-w-0 items-center gap-3">
+            <IconContainer aria-hidden="true" tone="hydration" size="large">
+              <TrackingIcon name="hydration" />
+            </IconContainer>
+            <span className="break-words">Hydration</span>
+          </span>
+        )}
         description={`Review ${profileName}'s hydration for ${formatLocalDate(selectedDate)} using the current configured goal.`}
         actions={(
           <Field label="Water date" className="w-full sm:w-auto">
             {(controlProps) => (
               <input
                 {...controlProps}
-                className="min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus sm:w-auto"
+                className="min-h-11 w-full rounded-control border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus-visible:border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
                 disabled={mutating}
                 max={getTodayLocalDate()}
                 type="date"
@@ -151,7 +163,7 @@ export default function WaterTrackingPanel({ userProfileId, profileName }: Water
 
       {isInitialLoading && <LoadingState message="Loading water tracking..." />}
 
-      {isRefreshing && <p className="px-1 text-sm text-app-secondary" role="status">Refreshing water tracking...</p>}
+      {isRefreshing && <LoadingState compact message="Refreshing water tracking..." />}
 
       {error && (
         <Alert
@@ -174,22 +186,26 @@ export default function WaterTrackingPanel({ userProfileId, profileName }: Water
       {hasLoadedData && goal && (
         <>
           {summary && <HydrationSummaryCard summary={summary} />}
-          <WaterGoalEditor goal={goal} mutating={mutating} onUpdateGoal={handleGoalUpdate} />
-          <WaterQuickAdd mutating={mutating} onAdd={handleQuickAdd} />
-          <WaterEntryForm
-            editingEntry={editingEntry}
-            mutating={mutating}
-            selectedDate={selectedDate}
-            onCancelEdit={() => setEditingEntry(null)}
-            onCreate={handleCreate}
-            onUpdate={handleUpdate}
-          />
-          <WaterEntryHistory
-            entries={entries}
-            mutating={mutating}
-            onDelete={handleDelete}
-            onEdit={handleEdit}
-          />
+          <div className="grid min-w-0 gap-5 xl:grid-cols-2 xl:items-start">
+            <WaterGoalEditor goal={goal} mutating={mutating} onUpdateGoal={handleGoalUpdate} />
+            <WaterQuickAdd mutating={mutating} onAdd={handleQuickAdd} />
+          </div>
+          <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(20rem,0.85fr)_minmax(0,1.15fr)] xl:items-start">
+            <WaterEntryForm
+              editingEntry={editingEntry}
+              mutating={mutating}
+              selectedDate={selectedDate}
+              onCancelEdit={() => setEditingEntry(null)}
+              onCreate={handleCreate}
+              onUpdate={handleUpdate}
+            />
+            <WaterEntryHistory
+              entries={entries}
+              mutating={mutating}
+              onDelete={handleDelete}
+              onEdit={handleEdit}
+            />
+          </div>
         </>
       )}
 

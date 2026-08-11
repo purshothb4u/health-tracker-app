@@ -1,10 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import type { WaterGoal, WaterGoalRequest } from '../types/WaterTracking'
+import TrackingIcon from './TrackingIcon'
 import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
 import { Field } from './ui/Field'
+import { IconContainer } from './ui/IconContainer'
 import { SectionHeader } from './ui/SectionHeader'
+import { StatusBadge } from './ui/StatusBadge'
 
 interface WaterGoalEditorProps {
   goal: WaterGoal
@@ -45,22 +48,38 @@ export default function WaterGoalEditor({ goal, mutating, onUpdateGoal }: WaterG
   const hasGoal = goal.dailyGoalMl !== null
 
   return (
-    <Card as="section" padding="normal" aria-labelledby="water-goal-heading">
+    <Card
+      as="section"
+      padding="normal"
+      aria-labelledby="water-goal-heading"
+      className="min-w-0 border-metric-hydration/20"
+    >
       <form aria-describedby={error ? 'water-goal-error' : undefined} onSubmit={handleSubmit}>
-        <SectionHeader
-          headingId="water-goal-heading"
-          headingLevel={3}
-          title="Daily water goal"
-          description={hasGoal
-            ? 'Update the current goal used for all hydration summaries.'
-            : 'Set a personal daily goal to enable hydration progress.'}
-        />
+        <div className="flex min-w-0 items-start gap-3">
+          <IconContainer aria-hidden="true" tone="hydration">
+            <TrackingIcon name="target" />
+          </IconContainer>
+          <SectionHeader
+            className="min-w-0 flex-1"
+            headingId="water-goal-heading"
+            headingLevel={3}
+            title="Daily water goal"
+            description={hasGoal
+              ? 'Update the current goal used for all hydration summaries.'
+              : 'Set a personal daily goal to enable hydration progress.'}
+            actions={(
+              <StatusBadge tone={hasGoal ? 'hydration' : 'neutral'}>
+                {hasGoal ? 'Goal configured' : 'Not configured'}
+              </StatusBadge>
+            )}
+          />
+        </div>
 
         <Field className="mt-5" label="Configured goal (ml)" required hint="Enter a positive whole number of millilitres.">
           {(controlProps) => (
             <input
               {...controlProps}
-              className="min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70"
+              className="min-h-11 w-full rounded-control border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus-visible:border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:bg-app-border-muted disabled:opacity-70"
               disabled={mutating}
               inputMode="numeric"
               min="1"

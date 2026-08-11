@@ -5,10 +5,12 @@ import { formatLocalDate } from '../utils/dateFormatting'
 import DailySleepSummaryCard from './DailySleepSummaryCard'
 import SleepEntryForm from './SleepEntryForm'
 import SleepEntryHistory from './SleepEntryHistory'
+import TrackingIcon from './TrackingIcon'
 import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 import { Field } from './ui/Field'
+import { IconContainer } from './ui/IconContainer'
 import { LoadingState } from './ui/LoadingState'
 import { SectionHeader } from './ui/SectionHeader'
 
@@ -112,18 +114,25 @@ export default function SleepTrackingPanel({
   const isRefreshing = loading && hasLoadedData
 
   return (
-    <section className="min-w-0 space-y-4" aria-labelledby={`sleep-tracking-heading-${userProfileId}`}>
+    <section className="min-w-0 space-y-5" aria-labelledby={`sleep-tracking-heading-${userProfileId}`}>
       <SectionHeader
         headingId={`sleep-tracking-heading-${userProfileId}`}
         headingLevel={2}
-        title="Sleep tracking"
+        title={(
+          <span className="flex min-w-0 items-center gap-3">
+            <IconContainer aria-hidden="true" tone="sleep" size="large">
+              <TrackingIcon name="sleep" />
+            </IconContainer>
+            <span className="break-words">Rest — Sleep</span>
+          </span>
+        )}
         description={`Review ${profileName}'s sleep sessions ending on ${formatLocalDate(selectedDate)}.`}
         actions={(
           <Field label="Sleep date" className="w-full sm:w-auto">
             {(controlProps) => (
               <input
                 {...controlProps}
-                className="min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus sm:w-auto"
+                className="min-h-11 w-full rounded-control border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus-visible:border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
                 disabled={mutating}
                 max={getTodayLocalDate()}
                 type="date"
@@ -137,11 +146,7 @@ export default function SleepTrackingPanel({
 
       {isInitialLoading && <LoadingState message="Loading sleep tracking..." />}
 
-      {isRefreshing && (
-        <p className="px-1 text-sm text-app-secondary" role="status">
-          Refreshing sleep tracking...
-        </p>
-      )}
+      {isRefreshing && <LoadingState compact message="Refreshing sleep tracking..." />}
 
       {error && (
         <Alert
@@ -168,21 +173,23 @@ export default function SleepTrackingPanel({
       {hasLoadedData && (
         <>
           {summary && <DailySleepSummaryCard summary={summary} />}
-          <SleepEntryForm
-            editingEntry={editingEntry}
-            mutating={mutating}
-            selectedDate={selectedDate}
-            onActionStart={beginAction}
-            onCancelEdit={() => setEditingEntry(null)}
-            onCreate={handleCreate}
-            onUpdate={handleUpdate}
-          />
-          <SleepEntryHistory
-            entries={entries}
-            mutating={mutating}
-            onDelete={handleDelete}
-            onEdit={handleEdit}
-          />
+          <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(21rem,0.92fr)_minmax(0,1.08fr)] xl:items-start">
+            <SleepEntryForm
+              editingEntry={editingEntry}
+              mutating={mutating}
+              selectedDate={selectedDate}
+              onActionStart={beginAction}
+              onCancelEdit={() => setEditingEntry(null)}
+              onCreate={handleCreate}
+              onUpdate={handleUpdate}
+            />
+            <SleepEntryHistory
+              entries={entries}
+              mutating={mutating}
+              onDelete={handleDelete}
+              onEdit={handleEdit}
+            />
+          </div>
         </>
       )}
 

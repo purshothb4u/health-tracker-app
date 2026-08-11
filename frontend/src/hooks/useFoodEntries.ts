@@ -96,19 +96,14 @@ export function useFoodEntries(userProfileId: number | null): UseFoodEntriesResu
     async (data: FoodEntryRequest): Promise<FoodEntry> => {
       if (userProfileId === null) {
         const profileError = new Error('A user profile is required to create a food entry')
-        setError(profileError.message)
         throw profileError
       }
 
       setMutating(true)
-      setError(null)
       try {
         const foodEntry = await createFoodEntry(userProfileId, data)
         reload()
         return foodEntry
-      } catch (err) {
-        setError(getErrorMessage(err, 'Failed to create food entry'))
-        throw err
       } finally {
         setMutating(false)
       }
@@ -120,19 +115,14 @@ export function useFoodEntries(userProfileId: number | null): UseFoodEntriesResu
     async (foodEntryId: number, data: FoodEntryRequest): Promise<FoodEntry> => {
       if (userProfileId === null) {
         const profileError = new Error('A user profile is required to update a food entry')
-        setError(profileError.message)
         throw profileError
       }
 
       setMutating(true)
-      setError(null)
       try {
         const foodEntry = await updateFoodEntry(userProfileId, foodEntryId, data)
         reload()
         return foodEntry
-      } catch (err) {
-        setError(getErrorMessage(err, 'Failed to update food entry'))
-        throw err
       } finally {
         setMutating(false)
       }
@@ -144,18 +134,13 @@ export function useFoodEntries(userProfileId: number | null): UseFoodEntriesResu
     async (foodEntryId: number): Promise<void> => {
       if (userProfileId === null) {
         const profileError = new Error('A user profile is required to delete a food entry')
-        setError(profileError.message)
         throw profileError
       }
 
       setMutating(true)
-      setError(null)
       try {
         await deleteFoodEntry(userProfileId, foodEntryId)
         reload()
-      } catch (err) {
-        setError(getErrorMessage(err, 'Failed to delete food entry'))
-        throw err
       } finally {
         setMutating(false)
       }
@@ -163,9 +148,14 @@ export function useFoodEntries(userProfileId: number | null): UseFoodEntriesResu
     [reload, userProfileId],
   )
 
+  const dataMatchesContext = summary !== null
+    && userProfileId !== null
+    && summary.userProfileId === userProfileId
+    && summary.entryDate === selectedDate
+
   return {
-    entries,
-    summary,
+    entries: dataMatchesContext ? entries : [],
+    summary: dataMatchesContext ? summary : null,
     loading,
     mutating,
     error,

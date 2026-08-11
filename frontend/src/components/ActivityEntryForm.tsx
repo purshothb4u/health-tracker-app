@@ -6,11 +6,14 @@ import {
   type ActivityEntryRequest,
 } from '../types/ActivityTracking'
 import { formatLocalDate } from '../utils/dateFormatting'
+import TrackingIcon from './TrackingIcon'
 import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
 import { Field } from './ui/Field'
+import { IconContainer } from './ui/IconContainer'
 import { SectionHeader } from './ui/SectionHeader'
+import { StatusBadge } from './ui/StatusBadge'
 
 interface ActivityEntryFormProps {
   selectedDate: string
@@ -25,7 +28,7 @@ interface ActivityEntryFormProps {
 const activityCategories = Object.keys(ACTIVITY_CATEGORY_LABELS) as ActivityCategory[]
 const wholeNumberPattern = /^\d+$/
 const distancePattern = /^\d+(?:\.\d{1,3})?$/
-const controlClassName = 'min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70'
+const controlClassName = 'min-h-11 w-full min-w-0 rounded-control border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus-visible:border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:bg-app-border-muted disabled:opacity-70'
 
 function emptyFormValues() {
   return {
@@ -201,24 +204,35 @@ export default function ActivityEntryForm({
   }
 
   return (
-    <Card as="section" padding="normal" aria-labelledby="activity-entry-form-heading">
+    <Card
+      as="section"
+      padding="normal"
+      aria-labelledby="activity-entry-form-heading"
+      className={isEditing ? 'border-information-border bg-information-surface/20' : undefined}
+    >
       <form aria-describedby={error ? 'activity-entry-form-error' : undefined} onSubmit={handleSubmit}>
-        <SectionHeader
-          headingId="activity-entry-form-heading"
-          headingLevel={3}
-          title={isEditing ? 'Edit activity entry' : 'Add activity entry'}
-          description={`${isEditing ? 'Update' : 'Record'} activity for ${formatLocalDate(selectedDate)}.`}
-          actions={isEditing ? (
-            <Button variant="secondary" disabled={mutating} onClick={onCancelEdit}>
-              Cancel edit
-            </Button>
-          ) : undefined}
-        />
+        <div className="flex min-w-0 items-start gap-3">
+          <IconContainer aria-hidden="true" tone="activity">
+            <TrackingIcon name={isEditing ? 'activity' : 'plus'} />
+          </IconContainer>
+          <SectionHeader
+            className="min-w-0 flex-1"
+            headingId="activity-entry-form-heading"
+            headingLevel={3}
+            title={isEditing ? 'Edit activity entry' : 'Add activity entry'}
+            description={`${isEditing ? 'Update' : 'Record'} activity for ${formatLocalDate(selectedDate)}.`}
+            actions={(
+              <StatusBadge tone={isEditing ? 'information' : 'activity'}>
+                {isEditing ? 'Editing entry' : 'New entry'}
+              </StatusBadge>
+            )}
+          />
+        </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <Field label="Selected date">
+          <Field className="sm:col-span-2" label="Selected date">
             {(controlProps) => (
-              <input {...controlProps} className={`${controlClassName} bg-slate-100`} readOnly type="text" value={formatLocalDate(selectedDate)} />
+              <input {...controlProps} className={`${controlClassName} bg-app-border-muted/60 text-app-secondary`} readOnly type="text" value={formatLocalDate(selectedDate)} />
             )}
           </Field>
           <Field label="Category" required>
@@ -230,13 +244,12 @@ export default function ActivityEntryForm({
               </select>
             )}
           </Field>
+          <Field label="Activity name" required hint="Use a clear name up to 100 characters.">
+            {(controlProps) => (
+              <input {...controlProps} className={controlClassName} disabled={mutating} maxLength={100} type="text" value={formValues.activityName} onChange={(event) => updateField('activityName', event.target.value)} />
+            )}
+          </Field>
         </div>
-
-        <Field className="mt-4" label="Activity name" required hint="Use a clear name up to 100 characters.">
-          {(controlProps) => (
-            <input {...controlProps} className={controlClassName} disabled={mutating} maxLength={100} type="text" value={formValues.activityName} onChange={(event) => updateField('activityName', event.target.value)} />
-          )}
-        </Field>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Field label="Duration (minutes)" required hint="Enter a whole number from 1 to 1,440.">
@@ -249,6 +262,9 @@ export default function ActivityEntryForm({
               <input {...controlProps} className={controlClassName} disabled={mutating} inputMode="numeric" placeholder="e.g. 8500" type="text" value={formValues.steps} onChange={(event) => updateField('steps', event.target.value)} />
             )}
           </Field>
+        </div>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Field label="Distance (km)" optional hint="Up to three decimal places; zero remains a recorded value.">
             {(controlProps) => (
               <input {...controlProps} className={controlClassName} disabled={mutating} inputMode="decimal" placeholder="e.g. 3.275" type="text" value={formValues.distanceKm} onChange={(event) => updateField('distanceKm', event.target.value)} />
@@ -269,9 +285,16 @@ export default function ActivityEntryForm({
 
         {error ? <Alert id="activity-entry-form-error" className="mt-4" tone="error" title="Check the activity entry">{error}</Alert> : null}
 
-        <Button className="mt-5" disabled={mutating} fullWidth type="submit">
-          {mutating ? 'Saving activity entry...' : isEditing ? 'Update activity entry' : 'Add activity entry'}
-        </Button>
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
+          {isEditing ? (
+            <Button variant="secondary" disabled={mutating} fullWidth className="sm:w-auto" onClick={onCancelEdit}>
+              Cancel edit
+            </Button>
+          ) : null}
+          <Button disabled={mutating} fullWidth className="sm:w-auto" type="submit">
+            {mutating ? 'Saving activity entry...' : isEditing ? 'Update activity entry' : 'Add activity entry'}
+          </Button>
+        </div>
       </form>
     </Card>
   )

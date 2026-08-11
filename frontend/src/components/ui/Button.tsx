@@ -12,13 +12,13 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'border-transparent bg-primary-600 text-white shadow-sm hover:bg-primary-700 disabled:bg-primary-600',
+    'border-transparent bg-primary text-white shadow-sm hover:bg-primary-hover active:bg-primary-pressed disabled:bg-primary',
   secondary:
-    'border-app-border bg-app-surface text-app-primary shadow-sm hover:bg-slate-50',
+    'border-app-border bg-app-surface text-app-primary shadow-sm hover:border-primary-100 hover:bg-primary-50 active:bg-primary-100',
   quiet:
-    'border-transparent bg-transparent text-app-secondary hover:bg-slate-100 hover:text-app-primary',
+    'border-transparent bg-transparent text-app-secondary hover:bg-primary-50 hover:text-app-primary active:bg-primary-100',
   destructive:
-    'border-transparent bg-error text-white shadow-sm hover:bg-red-800 disabled:bg-error',
+    'border-transparent bg-error text-white shadow-sm hover:bg-error-hover active:bg-error-pressed disabled:bg-error',
 }
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -44,10 +44,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type={type}
       disabled={disabled}
       className={classNames(
-        'inline-flex items-center justify-center gap-2 rounded-lg border font-semibold leading-5',
-        'transition-colors duration-150 motion-reduce:transition-none',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2',
-        'disabled:cursor-not-allowed disabled:opacity-55',
+        'inline-flex items-center justify-center gap-2 rounded-control border font-semibold leading-5',
+        'transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out',
+        'active:translate-y-px motion-reduce:transform-none motion-reduce:transition-none',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-app-background',
+        'disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-55',
         variantClasses[variant],
         sizeClasses[size],
         fullWidth && 'w-full',

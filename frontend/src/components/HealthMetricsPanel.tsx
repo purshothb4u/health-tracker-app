@@ -26,7 +26,7 @@ export default function HealthMetricsPanel({ profile, onMetricSaved }: HealthMet
   }
 
   return (
-    <section aria-labelledby={headingId} className="min-w-0 space-y-5">
+    <section aria-labelledby={headingId} className="min-w-0 space-y-rhythm-lg">
       <SectionHeader
         headingId={headingId}
         headingLevel={2}
@@ -56,15 +56,15 @@ export default function HealthMetricsPanel({ profile, onMetricSaved }: HealthMet
 
       {hasLoadedData ? (
         <>
-          <div className="grid min-w-0 gap-5 xl:grid-cols-2 xl:items-start">
-            {summary ? <HealthSummaryCard summary={summary} /> : null}
+          {summary ? <HealthSummaryCard profile={profile} summary={summary} /> : null}
+          <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(19rem,0.78fr)_minmax(0,1.45fr)] xl:items-start">
             <HealthMetricForm
               userProfileId={profile.id}
               metrics={metrics}
               onSaved={handleMetricSaved}
             />
+            <HealthMetricHistory metrics={metrics} />
           </div>
-          <HealthMetricHistory metrics={metrics} />
         </>
       ) : null}
     </section>

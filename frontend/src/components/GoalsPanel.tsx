@@ -5,11 +5,13 @@ import { GOAL_STATUS_LABELS } from '../types/Goal'
 import AchievementBadge from './AchievementBadge'
 import GoalCard from './GoalCard'
 import GoalForm from './GoalForm'
+import TrackingIcon from './TrackingIcon'
 import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 import { EmptyState } from './ui/EmptyState'
+import { IconContainer } from './ui/IconContainer'
 import { LoadingState } from './ui/LoadingState'
 import { SectionHeader } from './ui/SectionHeader'
 import { StatusBadge } from './ui/StatusBadge'
@@ -29,6 +31,12 @@ const filters: Array<{ value: GoalStatus | null; label: string }> = [
 
 function messageFrom(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
+}
+
+function ownerTone(profileName: string) {
+  if (profileName === 'Husband') return 'profile-husband' as const
+  if (profileName === 'Wife') return 'profile-wife' as const
+  return 'neutral' as const
 }
 
 export default function GoalsPanel({ userProfileId, profileName }: GoalsPanelProps) {
@@ -117,18 +125,37 @@ export default function GoalsPanel({ userProfileId, profileName }: GoalsPanelPro
     }
   }
 
+  function retryGoals() {
+    setActionError(null)
+    goalsState.reload()
+  }
+
   const initialLoading = goalsState.loading && goalsState.goals.length === 0
+  const visibleError = actionError ?? goalsState.error
 
   return (
-    <Card as="section" padding="normal" className="min-w-0 space-y-5" aria-labelledby={headingId}>
+    <Card
+      as="section"
+      padding="normal"
+      elevated
+      className="min-w-0 space-y-5 border-primary-100 bg-primary-50/25"
+      aria-labelledby={headingId}
+    >
       <SectionHeader
         headingId={headingId}
         headingLevel={2}
-        title="Personal goals"
+        title={(
+          <span className="flex min-w-0 items-center gap-3">
+            <IconContainer aria-hidden="true" tone="primary" size="large">
+              <TrackingIcon name="target" />
+            </IconContainer>
+            <span className="break-words">Personal goals</span>
+          </span>
+        )}
         description={`Goals owned by ${profileName}. Switching profiles changes this section.`}
         actions={(
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge tone="information">Owner: {profileName}</StatusBadge>
+            <StatusBadge tone={ownerTone(profileName)}>Owner: {profileName}</StatusBadge>
             <Button disabled={goalsState.mutating} onClick={beginCreate}>Add goal</Button>
           </div>
         )}
@@ -165,21 +192,23 @@ export default function GoalsPanel({ userProfileId, profileName }: GoalsPanelPro
       ) : null}
 
       {goalsState.refreshing ? <LoadingState compact message="Refreshing personal goals..." /> : null}
-      {actionError || goalsState.error ? (
+      {visibleError ? (
         <Alert
           tone="error"
-          title="Unable to update personal goals"
-          action={<Button variant="secondary" size="compact" disabled={goalsState.mutating} onClick={goalsState.reload}>Retry</Button>}
+          title="Unable to load or update personal goals"
+          action={<Button variant="secondary" size="compact" disabled={goalsState.mutating} onClick={retryGoals}>Retry</Button>}
         >
-          {actionError ?? goalsState.error}
+          {visibleError}
         </Alert>
       ) : null}
       {successMessage ? <Alert tone="success">{successMessage}</Alert> : null}
 
       {initialLoading ? (
         <LoadingState message="Loading personal goals..." />
-      ) : goalsState.goals.length === 0 ? (
+      ) : goalsState.goals.length === 0 && visibleError === null ? (
         <EmptyState
+          icon={<TrackingIcon name="target" />}
+          iconTone="primary"
           title="No personal goals match this filter"
           description={`Choose another status or add a goal for ${profileName}.`}
         />
@@ -205,7 +234,14 @@ export default function GoalsPanel({ userProfileId, profileName }: GoalsPanelPro
           <SectionHeader
             headingId={`goal-achievements-heading-${userProfileId}`}
             headingLevel={3}
-            title="Goal achievements"
+            title={(
+              <span className="flex min-w-0 items-center gap-2">
+                <IconContainer aria-hidden="true" tone="primary" size="small">
+                  <TrackingIcon name="achievement" />
+                </IconContainer>
+                <span>Goal achievements</span>
+              </span>
+            )}
             description={`Achievements earned by ${profileName}.`}
           />
           <div className="grid min-w-0 gap-3 sm:grid-cols-2">

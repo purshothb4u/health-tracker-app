@@ -1,14 +1,20 @@
 import { useEffect, useState } from 'react'
 import type { ProgressCheckInRequest } from '../types/Goal'
+import TrackingIcon from './TrackingIcon'
 import { Button } from './ui/Button'
 import { EmptyState } from './ui/EmptyState'
 import { Field } from './ui/Field'
+import { IconContainer, type IconContainerTone } from './ui/IconContainer'
+import { StatusBadge, type StatusBadgeTone } from './ui/StatusBadge'
+
+type CheckInTone = 'primary' | 'husband' | 'wife' | 'shared'
 
 interface GoalCheckInControlProps {
   startDate: string
   endDate: string
   mutating: boolean
   label?: string
+  tone?: CheckInTone
   onSubmit: (date: string, data: ProgressCheckInRequest) => Promise<unknown>
 }
 
@@ -20,11 +26,33 @@ function getTodayLocalDate(): string {
   return `${year}-${month}-${day}`
 }
 
+const containerClasses: Record<CheckInTone, string> = {
+  primary: 'border-primary-100 bg-primary-50/50',
+  husband: 'border-profile-husband-accent/25 bg-profile-husband-surface/65',
+  wife: 'border-profile-wife-accent/25 bg-profile-wife-surface/65',
+  shared: 'border-profile-shared/30 bg-profile-shared-surface/60',
+}
+
+const iconTones: Record<CheckInTone, IconContainerTone> = {
+  primary: 'primary',
+  husband: 'husband',
+  wife: 'wife',
+  shared: 'shared',
+}
+
+const identityBadgeTones: Record<CheckInTone, StatusBadgeTone> = {
+  primary: 'neutral',
+  husband: 'profile-husband',
+  wife: 'profile-wife',
+  shared: 'profile-shared',
+}
+
 export default function GoalCheckInControl({
   startDate,
   endDate,
   mutating,
   label = 'Daily check-in',
+  tone = 'primary',
   onSubmit,
 }: GoalCheckInControlProps) {
   const today = getTodayLocalDate()
@@ -44,6 +72,8 @@ export default function GoalCheckInControl({
     return (
       <EmptyState
         compact
+        icon={<TrackingIcon name="check" />}
+        iconTone={iconTones[tone]}
         title="Check-in unavailable"
         description="Check-ins are available only during this goal or challenge date range."
       />
@@ -59,15 +89,23 @@ export default function GoalCheckInControl({
     }
   }
 
-  const inputClass = 'min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus'
+  const inputClass = 'min-h-11 w-full min-w-0 rounded-control border border-app-border bg-app-surface px-3 py-2 text-sm text-app-primary shadow-sm focus-visible:border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:bg-app-border-muted disabled:text-app-secondary'
 
   return (
     <form
-      className="min-w-0 space-y-4 rounded-xl border border-primary-100 bg-primary-50/50 p-4"
+      className={`min-w-0 space-y-4 rounded-card border p-4 ${containerClasses[tone]}`}
       aria-label={label}
       onSubmit={handleSubmit}
     >
-      <p className="break-words text-sm font-semibold text-app-primary">{label}</p>
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <IconContainer aria-hidden="true" tone={iconTones[tone]} size="small">
+            <TrackingIcon name="check" />
+          </IconContainer>
+          <h4 className="break-words text-card-title text-app-primary">{label}</h4>
+        </div>
+        <StatusBadge tone={identityBadgeTones[tone]}>{completed ? 'Completed' : 'Not completed'}</StatusBadge>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Date" required>
           {(controlProps) => (

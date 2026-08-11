@@ -1,8 +1,11 @@
 import type { FoodEntry, MealType } from '../types/FoodEntry'
+import TrackingIcon from './TrackingIcon'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
 import { EmptyState } from './ui/EmptyState'
+import { IconContainer } from './ui/IconContainer'
 import { SectionHeader } from './ui/SectionHeader'
+import { StatusBadge } from './ui/StatusBadge'
 
 interface FoodEntryHistoryProps {
   entries: FoodEntry[]
@@ -30,17 +33,25 @@ export default function FoodEntryHistory({
 }: FoodEntryHistoryProps) {
   return (
     <Card as="section" padding="normal" aria-labelledby="food-history-heading">
-      <SectionHeader
-        headingId="food-history-heading"
-        headingLevel={3}
-        title="Food history"
-        description="Entries are grouped by meal in the order they were recorded."
-      />
+      <div className="flex min-w-0 items-start gap-3">
+        <IconContainer aria-hidden="true" tone="nutrition">
+          <TrackingIcon name="history" />
+        </IconContainer>
+        <SectionHeader
+          className="min-w-0 flex-1"
+          headingId="food-history-heading"
+          headingLevel={3}
+          title="Food history"
+          description="Entries are grouped by meal in the order they were recorded."
+        />
+      </div>
 
       {entries.length === 0 ? (
         <EmptyState
           className="mt-5"
           compact
+          icon={<TrackingIcon name="nutrition" />}
+          iconTone="nutrition"
           title="No food logged"
           description="No food entries were recorded for this date. Zero intake is not assumed."
         />
@@ -53,14 +64,19 @@ export default function FoodEntryHistory({
             }
 
             return (
-              <div key={mealType}>
-                <h4 className="text-sm font-semibold text-app-primary">{label}</h4>
+              <div key={mealType} className="min-w-0">
+                <div className="flex min-w-0 items-center justify-between gap-3 border-b border-app-border-muted pb-2">
+                  <h4 className="break-words text-card-title text-app-primary">{label}</h4>
+                  <StatusBadge tone="nutrition">
+                    {mealEntries.length} {mealEntries.length === 1 ? 'entry' : 'entries'}
+                  </StatusBadge>
+                </div>
                 <div className="mt-2 space-y-3">
                   {mealEntries.map((entry) => (
-                    <article key={entry.id} className="min-w-0 rounded-xl border border-app-border bg-slate-50 p-4">
+                    <article key={entry.id} className="min-w-0 rounded-card border border-app-border-muted bg-app-background/55 p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
-                          <p className="break-words font-semibold text-app-primary">{entry.foodName}</p>
+                          <h5 className="break-words text-card-title text-app-primary">{entry.foodName}</h5>
                           <p className="mt-1 break-words text-sm text-app-secondary">
                             {formatNumber(entry.quantity)} {entry.unit} · {formatNumber(entry.calories)} kcal
                           </p>
@@ -78,16 +94,16 @@ export default function FoodEntryHistory({
                           </Button>
                         </div>
                       </div>
-                      <dl className="mt-3 grid grid-cols-1 gap-2 text-xs min-[360px]:grid-cols-3">
-                        <div className="rounded-lg bg-app-surface px-2 py-2">
+                      <dl className="mt-3 grid grid-cols-1 gap-2 text-metadata min-[430px]:grid-cols-3">
+                        <div className="rounded-control border border-app-border-muted bg-app-surface px-3 py-2">
                           <dt className="text-app-secondary">Protein</dt>
                           <dd className="mt-1 font-semibold text-app-primary">{formatNumber(entry.proteinGrams)} g</dd>
                         </div>
-                        <div className="rounded-lg bg-app-surface px-2 py-2">
+                        <div className="rounded-control border border-app-border-muted bg-app-surface px-3 py-2">
                           <dt className="break-words text-app-secondary">Carbohydrates</dt>
                           <dd className="mt-1 font-semibold text-app-primary">{formatNumber(entry.carbohydrateGrams)} g</dd>
                         </div>
-                        <div className="rounded-lg bg-app-surface px-2 py-2">
+                        <div className="rounded-control border border-app-border-muted bg-app-surface px-3 py-2">
                           <dt className="text-app-secondary">Fat</dt>
                           <dd className="mt-1 font-semibold text-app-primary">{formatNumber(entry.fatGrams)} g</dd>
                         </div>

@@ -274,18 +274,15 @@ export function useSleepTracking(userProfileId: number | null): UseSleepTracking
   const beginMutation = useCallback(() => {
     if (userProfileId === null) {
       const profileError = new Error('A user profile is required for sleep tracking')
-      setError(profileError.message)
       throw profileError
     }
     if (mutationInProgress.current) {
       const mutationError = new Error('A sleep tracking update is already in progress')
-      setError(mutationError.message)
       throw mutationError
     }
 
     mutationInProgress.current = true
     setMutating(true)
-    setError(null)
     return userProfileId
   }, [userProfileId])
 
@@ -293,7 +290,6 @@ export function useSleepTracking(userProfileId: number | null): UseSleepTracking
     async (data: SleepEntryRequest): Promise<SleepEntry> => {
       const validationError = validateSleepEntry(data)
       if (validationError !== null) {
-        setError(validationError)
         throw new Error(validationError)
       }
 
@@ -304,11 +300,6 @@ export function useSleepTracking(userProfileId: number | null): UseSleepTracking
           reload()
         }
         return entry
-      } catch (err) {
-        if (mounted.current && currentUserProfileId.current === selectedUserProfileId) {
-          setError(getErrorMessage(err, 'Failed to create sleep entry'))
-        }
-        throw err
       } finally {
         mutationInProgress.current = false
         if (mounted.current) {
@@ -323,7 +314,6 @@ export function useSleepTracking(userProfileId: number | null): UseSleepTracking
     async (sleepEntryId: number, data: SleepEntryRequest): Promise<SleepEntry> => {
       const validationError = validateSleepEntry(data)
       if (validationError !== null) {
-        setError(validationError)
         throw new Error(validationError)
       }
 
@@ -334,11 +324,6 @@ export function useSleepTracking(userProfileId: number | null): UseSleepTracking
           reload()
         }
         return entry
-      } catch (err) {
-        if (mounted.current && currentUserProfileId.current === selectedUserProfileId) {
-          setError(getErrorMessage(err, 'Failed to update sleep entry'))
-        }
-        throw err
       } finally {
         mutationInProgress.current = false
         if (mounted.current) {
@@ -357,11 +342,6 @@ export function useSleepTracking(userProfileId: number | null): UseSleepTracking
         if (mounted.current && currentUserProfileId.current === selectedUserProfileId) {
           reload()
         }
-      } catch (err) {
-        if (mounted.current && currentUserProfileId.current === selectedUserProfileId) {
-          setError(getErrorMessage(err, 'Failed to delete sleep entry'))
-        }
-        throw err
       } finally {
         mutationInProgress.current = false
         if (mounted.current) {
@@ -372,11 +352,16 @@ export function useSleepTracking(userProfileId: number | null): UseSleepTracking
     [beginMutation, reload],
   )
 
+  const dataMatchesContext = summary !== null
+    && userProfileId !== null
+    && summary.userProfileId === userProfileId
+    && summary.sleepDate === selectedDate
+
   return {
     selectedDate,
     setSelectedDate,
-    entries,
-    summary,
+    entries: dataMatchesContext ? entries : [],
+    summary: dataMatchesContext ? summary : null,
     loading,
     mutating,
     error,

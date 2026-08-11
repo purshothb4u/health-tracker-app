@@ -4,7 +4,6 @@ import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
-import { PageHeader } from '../components/ui/PageHeader'
 import { StatusBadge, type StatusBadgeTone } from '../components/ui/StatusBadge'
 import { useSelectedProfile } from '../context/SelectedProfileContext'
 
@@ -25,18 +24,21 @@ export default function GoalsPage() {
   } = useSelectedProfile()
 
   return (
-    <div className="min-w-0 space-y-8">
-      <PageHeader
-        title="Goals"
-        description={selectedProfile
-          ? `Manage ${selectedProfile.name}'s personal goals and the challenges shared by both profiles.`
-          : 'Manage personal goals and shared couple challenges.'}
-        actions={selectedProfile ? (
+    <div className="min-w-0 space-y-rhythm-lg">
+      <header className="flex min-w-0 flex-col gap-4 border-b border-app-border-muted pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-label uppercase tracking-[0.14em] text-primary-700">Personal and shared</p>
+          <h1 className="mt-2 break-words text-page-title text-app-primary">Goals</h1>
+          <p className="mt-2 max-w-3xl break-words text-supporting text-app-secondary sm:text-base">
+            Build personal momentum and support one another through shared challenges.
+          </p>
+        </div>
+        {selectedProfile ? (
           <StatusBadge tone={profileTone(selectedProfile.name)}>
             Personal goals: {selectedProfile.name}
           </StatusBadge>
-        ) : undefined}
-      />
+        ) : null}
+      </header>
 
       {loading && selectedProfile === null ? (
         <LoadingState message="Loading goals and profiles..." />

@@ -1,13 +1,16 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import type { WaterEntry, WaterEntryRequest } from '../types/WaterTracking'
 import { formatLocalDate } from '../utils/dateFormatting'
+import TrackingIcon from './TrackingIcon'
 import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
 import { Field } from './ui/Field'
+import { IconContainer } from './ui/IconContainer'
 import { SectionHeader } from './ui/SectionHeader'
+import { StatusBadge } from './ui/StatusBadge'
 
-const controlClassName = 'min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70'
+const controlClassName = 'min-h-11 w-full rounded-control border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus-visible:border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:bg-app-border-muted disabled:opacity-70'
 
 interface WaterEntryFormProps {
   selectedDate: string
@@ -81,24 +84,35 @@ export default function WaterEntryForm({
   }
 
   return (
-    <Card as="section" padding="normal" aria-labelledby="water-entry-form-heading">
+    <Card
+      as="section"
+      padding="normal"
+      aria-labelledby="water-entry-form-heading"
+      className={isEditing ? 'border-information-border bg-information-surface/20' : undefined}
+    >
       <form aria-describedby={error ? 'water-entry-form-error' : undefined} onSubmit={handleSubmit}>
-        <SectionHeader
-          headingId="water-entry-form-heading"
-          headingLevel={3}
-          title={isEditing ? 'Edit water entry' : 'Add custom water entry'}
-          description={`${isEditing ? 'Update' : 'Record'} water for ${formatLocalDate(selectedDate)}.`}
-          actions={isEditing ? (
-            <Button variant="secondary" disabled={mutating} onClick={onCancelEdit}>
-              Cancel edit
-            </Button>
-          ) : undefined}
-        />
+        <div className="flex min-w-0 items-start gap-3">
+          <IconContainer aria-hidden="true" tone="hydration">
+            <TrackingIcon name={isEditing ? 'hydration' : 'plus'} />
+          </IconContainer>
+          <SectionHeader
+            className="min-w-0 flex-1"
+            headingId="water-entry-form-heading"
+            headingLevel={3}
+            title={isEditing ? 'Edit water entry' : 'Add custom water entry'}
+            description={`${isEditing ? 'Update' : 'Record'} water for ${formatLocalDate(selectedDate)}.`}
+            actions={(
+              <StatusBadge tone={isEditing ? 'information' : 'hydration'}>
+                {isEditing ? 'Editing entry' : 'Custom amount'}
+              </StatusBadge>
+            )}
+          />
+        </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <Field label="Selected date">
             {(controlProps) => (
-              <input {...controlProps} className={`${controlClassName} bg-slate-100`} readOnly type="text" value={formatLocalDate(selectedDate)} />
+              <input {...controlProps} className={`${controlClassName} bg-app-border-muted/60 text-app-secondary`} readOnly type="text" value={formatLocalDate(selectedDate)} />
             )}
           </Field>
           <Field label="Amount (ml)" required hint="Enter a positive whole number of millilitres.">
@@ -133,9 +147,16 @@ export default function WaterEntryForm({
 
         {error ? <Alert id="water-entry-form-error" className="mt-4" tone="error" title="Check the water entry">{error}</Alert> : null}
 
-        <Button className="mt-5" disabled={mutating} fullWidth type="submit">
-          {mutating ? 'Saving water entry...' : isEditing ? 'Update water entry' : 'Add water entry'}
-        </Button>
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
+          {isEditing ? (
+            <Button variant="secondary" disabled={mutating} fullWidth className="sm:w-auto" onClick={onCancelEdit}>
+              Cancel edit
+            </Button>
+          ) : null}
+          <Button disabled={mutating} fullWidth className="sm:w-auto" type="submit">
+            {mutating ? 'Saving water entry...' : isEditing ? 'Update water entry' : 'Add water entry'}
+          </Button>
+        </div>
       </form>
     </Card>
   )

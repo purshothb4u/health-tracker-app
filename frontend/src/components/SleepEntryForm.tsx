@@ -6,11 +6,14 @@ import {
   type SleepType,
 } from '../types/SleepTracking'
 import { formatLocalDate as formatDisplayDate } from '../utils/dateFormatting'
+import TrackingIcon from './TrackingIcon'
 import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
 import { Field } from './ui/Field'
+import { IconContainer } from './ui/IconContainer'
 import { SectionHeader } from './ui/SectionHeader'
+import { StatusBadge } from './ui/StatusBadge'
 
 interface SleepEntryFormProps {
   selectedDate: string
@@ -24,7 +27,7 @@ interface SleepEntryFormProps {
 
 const sleepTypes = Object.keys(SLEEP_TYPE_LABELS) as SleepType[]
 const wholeQualityPattern = /^[1-5]$/
-const controlClassName = 'min-h-11 w-full min-w-0 rounded-lg border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70'
+const controlClassName = 'min-h-11 w-full min-w-0 max-w-full rounded-control border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus-visible:border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:bg-app-border-muted disabled:opacity-70'
 
 function emptyFormValues() {
   return {
@@ -196,24 +199,35 @@ export default function SleepEntryForm({
   }
 
   return (
-    <Card as="section" padding="normal" aria-labelledby="sleep-entry-form-heading">
+    <Card
+      as="section"
+      padding="normal"
+      aria-labelledby="sleep-entry-form-heading"
+      className={isEditing ? 'border-information-border bg-information-surface/20' : undefined}
+    >
       <form aria-describedby={error ? 'sleep-entry-form-error' : undefined} onSubmit={handleSubmit}>
-        <SectionHeader
-          headingId="sleep-entry-form-heading"
-          headingLevel={3}
-          title={isEditing ? 'Edit sleep entry' : 'Add sleep entry'}
-          description={`${isEditing ? 'Update' : 'Record'} a session ending on ${formatDisplayDate(selectedDate)}.`}
-          actions={isEditing ? (
-            <Button variant="secondary" disabled={mutating} onClick={onCancelEdit}>
-              Cancel edit
-            </Button>
-          ) : undefined}
-        />
+        <div className="flex min-w-0 items-start gap-3">
+          <IconContainer aria-hidden="true" tone="sleep">
+            <TrackingIcon name={isEditing ? 'sleep' : 'plus'} />
+          </IconContainer>
+          <SectionHeader
+            className="min-w-0 flex-1"
+            headingId="sleep-entry-form-heading"
+            headingLevel={3}
+            title={isEditing ? 'Edit sleep entry' : 'Add sleep entry'}
+            description={`${isEditing ? 'Update' : 'Record'} a session ending on ${formatDisplayDate(selectedDate)}.`}
+            actions={(
+              <StatusBadge tone={isEditing ? 'information' : 'sleep'}>
+                {isEditing ? 'Editing session' : 'New session'}
+              </StatusBadge>
+            )}
+          />
+        </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <Field label="Selected sleep date" hint="This must match the end date below.">
             {(controlProps) => (
-              <input {...controlProps} className={`${controlClassName} bg-slate-100`} readOnly type="text" value={formatDisplayDate(selectedDate)} />
+              <input {...controlProps} className={`${controlClassName} bg-app-border-muted/60 text-app-secondary`} readOnly type="text" value={formatDisplayDate(selectedDate)} />
             )}
           </Field>
           <Field label="Sleep type" required>
@@ -228,18 +242,24 @@ export default function SleepEntryForm({
           </Field>
         </div>
 
-        <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2">
-          <Field label="Start date and time" required hint="Cross-midnight sessions may start on the previous date.">
-            {(controlProps) => (
-              <input {...controlProps} className={controlClassName} disabled={mutating} max={formatLocalDateTimeInput(new Date())} type="datetime-local" value={formValues.startDateTime} onChange={(event) => updateField('startDateTime', event.target.value)} />
-            )}
-          </Field>
-          <Field label="End date and time" required hint="The end date determines the selected sleep date.">
-            {(controlProps) => (
-              <input {...controlProps} className={controlClassName} disabled={mutating} max={formatLocalDateTimeInput(new Date())} type="datetime-local" value={formValues.endDateTime} onChange={(event) => updateField('endDateTime', event.target.value)} />
-            )}
-          </Field>
-        </div>
+        <fieldset className="mt-5 min-w-0 rounded-control border border-metric-sleep/25 bg-metric-sleep-surface/30 p-4">
+          <legend className="px-1 text-label text-app-primary">Session timing</legend>
+          <p className="mb-4 break-words text-metadata text-app-secondary">
+            Cross-midnight sleep may start on the previous date. The end date must match the selected sleep date.
+          </p>
+          <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+            <Field label="Start date and time" required hint="A cross-midnight session may start on the previous date.">
+              {(controlProps) => (
+                <input {...controlProps} className={controlClassName} disabled={mutating} max={formatLocalDateTimeInput(new Date())} type="datetime-local" value={formValues.startDateTime} onChange={(event) => updateField('startDateTime', event.target.value)} />
+              )}
+            </Field>
+            <Field label="End date and time" required hint="The end date determines the selected sleep date.">
+              {(controlProps) => (
+                <input {...controlProps} className={controlClassName} disabled={mutating} max={formatLocalDateTimeInput(new Date())} type="datetime-local" value={formValues.endDateTime} onChange={(event) => updateField('endDateTime', event.target.value)} />
+              )}
+            </Field>
+          </div>
+        </fieldset>
 
         <Field className="mt-4 sm:max-w-[calc(50%-0.5rem)]" label="Quality rating" optional hint="Enter a whole number from 1 to 5, or leave blank.">
           {(controlProps) => (
@@ -255,9 +275,16 @@ export default function SleepEntryForm({
 
         {error ? <Alert id="sleep-entry-form-error" className="mt-4" tone="error" title="Check the sleep entry">{error}</Alert> : null}
 
-        <Button className="mt-5" disabled={mutating} fullWidth type="submit">
-          {mutating ? 'Saving sleep entry...' : isEditing ? 'Update sleep entry' : 'Add sleep entry'}
-        </Button>
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
+          {isEditing ? (
+            <Button variant="secondary" disabled={mutating} fullWidth className="sm:w-auto" onClick={onCancelEdit}>
+              Cancel edit
+            </Button>
+          ) : null}
+          <Button disabled={mutating} fullWidth className="sm:w-auto" type="submit">
+            {mutating ? 'Saving sleep entry...' : isEditing ? 'Update sleep entry' : 'Add sleep entry'}
+          </Button>
+        </div>
       </form>
     </Card>
   )

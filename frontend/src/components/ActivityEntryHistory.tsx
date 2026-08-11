@@ -3,9 +3,11 @@ import {
   type ActivityEntry,
 } from '../types/ActivityTracking'
 import { formatDurationMinutes, formatLocalDateTime } from '../utils/dateFormatting'
+import TrackingIcon from './TrackingIcon'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
 import { EmptyState } from './ui/EmptyState'
+import { IconContainer } from './ui/IconContainer'
 import { SectionHeader } from './ui/SectionHeader'
 import { StatusBadge } from './ui/StatusBadge'
 
@@ -38,33 +40,49 @@ export default function ActivityEntryHistory({
 }: ActivityEntryHistoryProps) {
   return (
     <Card as="section" padding="normal" aria-labelledby="activity-history-heading">
-      <SectionHeader
-        headingId="activity-history-heading"
-        headingLevel={3}
-        title="Activity history"
-        description="Optional values appear as Not available when they were not supplied."
-      />
+      <div className="flex min-w-0 items-start gap-3">
+        <IconContainer aria-hidden="true" tone="activity">
+          <TrackingIcon name="history" />
+        </IconContainer>
+        <SectionHeader
+          className="min-w-0 flex-1"
+          headingId="activity-history-heading"
+          headingLevel={3}
+          title="Activity history"
+          description="Optional values appear as Not available when they were not supplied."
+        />
+      </div>
 
       {entries.length === 0 ? (
         <EmptyState
           className="mt-5"
           compact
+          icon={<TrackingIcon name="activity" />}
+          iconTone="activity"
           title="No activity logged"
           description="No activity entries were recorded for this date."
         />
       ) : (
         <div className="mt-5 space-y-3">
           {entries.map((entry) => (
-            <article key={entry.id} className="min-w-0 rounded-xl border border-app-border bg-slate-50 p-4">
+            <article
+              key={entry.id}
+              className="min-w-0 rounded-card border border-app-border-muted bg-app-background/55 p-4"
+            >
               <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <StatusBadge tone="information">{ACTIVITY_CATEGORY_LABELS[entry.category]}</StatusBadge>
-                  <p className="mt-2 break-words font-semibold text-app-primary">{entry.activityName}</p>
-                  <p className="mt-1 break-words text-sm text-app-secondary">
-                    {formatDurationMinutes(entry.durationMinutes)} · Added {formatLocalDateTime(entry.createdAt)}
-                  </p>
+                <div className="flex min-w-0 items-start gap-3">
+                  <IconContainer aria-hidden="true" tone="activity" size="small">
+                    <TrackingIcon name="activity" />
+                  </IconContainer>
+                  <div className="min-w-0">
+                    <StatusBadge tone="activity">{ACTIVITY_CATEGORY_LABELS[entry.category]}</StatusBadge>
+                    <h4 className="mt-2 break-words text-card-title text-app-primary">{entry.activityName}</h4>
+                    <p className="mt-1 break-words text-supporting text-app-secondary">
+                      {formatDurationMinutes(entry.durationMinutes)} &middot; Added {formatLocalDateTime(entry.createdAt)}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2" role="group" aria-label={`Actions for ${entry.activityName}`}>
                   <Button variant="secondary" disabled={mutating} onClick={() => onEdit(entry)}>
                     Edit
                   </Button>
@@ -74,23 +92,23 @@ export default function ActivityEntryHistory({
                 </div>
               </div>
 
-              <dl className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
-                <div className="rounded-lg bg-app-surface px-2 py-2">
-                  <dt className="text-app-secondary">Reported steps</dt>
-                  <dd className="mt-1 break-words font-semibold text-app-primary">{formatSteps(entry.steps)}</dd>
+              <dl className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div className="rounded-control border border-app-border-muted bg-app-surface px-3 py-2.5">
+                  <dt className="text-metadata text-app-secondary">Reported steps</dt>
+                  <dd className="mt-1 break-words text-sm font-semibold tabular-nums text-app-primary">{formatSteps(entry.steps)}</dd>
                 </div>
-                <div className="rounded-lg bg-app-surface px-2 py-2">
-                  <dt className="text-app-secondary">Reported distance</dt>
-                  <dd className="mt-1 break-words font-semibold text-app-primary">{formatDistance(entry.distanceKm)}</dd>
+                <div className="rounded-control border border-app-border-muted bg-app-surface px-3 py-2.5">
+                  <dt className="text-metadata text-app-secondary">Reported distance</dt>
+                  <dd className="mt-1 break-words text-sm font-semibold tabular-nums text-app-primary">{formatDistance(entry.distanceKm)}</dd>
                 </div>
-                <div className="rounded-lg bg-app-surface px-2 py-2">
-                  <dt className="text-app-secondary">Reported calories</dt>
-                  <dd className="mt-1 break-words font-semibold text-app-primary">{formatReportedCalories(entry.reportedCaloriesBurned)}</dd>
+                <div className="rounded-control border border-app-border-muted bg-app-surface px-3 py-2.5">
+                  <dt className="text-metadata text-app-secondary">Reported calories</dt>
+                  <dd className="mt-1 break-words text-sm font-semibold tabular-nums text-app-primary">{formatReportedCalories(entry.reportedCaloriesBurned)}</dd>
                 </div>
               </dl>
 
               {entry.notes ? (
-                <p className="mt-3 whitespace-pre-wrap break-words text-sm text-app-secondary">{entry.notes}</p>
+                <p className="mt-3 whitespace-pre-wrap break-words text-supporting text-app-secondary">{entry.notes}</p>
               ) : null}
             </article>
           ))}

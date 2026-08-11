@@ -5,11 +5,13 @@ import { CHALLENGE_STATUS_LABELS } from '../types/CoupleChallenge'
 import AchievementBadge from './AchievementBadge'
 import CoupleChallengeCard from './CoupleChallengeCard'
 import CoupleChallengeForm from './CoupleChallengeForm'
+import TrackingIcon from './TrackingIcon'
 import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 import { EmptyState } from './ui/EmptyState'
+import { IconContainer } from './ui/IconContainer'
 import { LoadingState } from './ui/LoadingState'
 import { SectionHeader } from './ui/SectionHeader'
 import { StatusBadge } from './ui/StatusBadge'
@@ -129,6 +131,11 @@ export default function CoupleChallengesPanel({ participantUserProfileIds }: Cou
     }
   }
 
+  function retryChallenges() {
+    setActionError(null)
+    challengeState.reload()
+  }
+
   const achievements = participantUserProfileIds
     .flatMap((userProfileId) => challengeState.achievementsByUserProfileId[userProfileId] ?? [])
     .filter((achievement, index, all) => all.findIndex((candidate) => (
@@ -136,17 +143,31 @@ export default function CoupleChallengesPanel({ participantUserProfileIds }: Cou
       && candidate.challengeId === achievement.challengeId
     )) === index)
   const initialLoading = challengeState.loading && challengeState.challenges.length === 0
+  const visibleError = actionError ?? challengeState.error
 
   return (
-    <Card as="section" padding="normal" className="min-w-0 space-y-5" aria-labelledby="shared-couple-challenges-heading">
+    <Card
+      as="section"
+      padding="normal"
+      elevated
+      className="min-w-0 space-y-5 border-profile-shared/30 bg-profile-shared-surface/25"
+      aria-labelledby="shared-couple-challenges-heading"
+    >
       <SectionHeader
         headingId="shared-couple-challenges-heading"
         headingLevel={2}
-        title="Shared couple challenges"
+        title={(
+          <span className="flex min-w-0 items-center gap-3">
+            <IconContainer aria-hidden="true" tone="shared" size="large">
+              <TrackingIcon name="shared" />
+            </IconContainer>
+            <span className="break-words">Shared couple challenges</span>
+          </span>
+        )}
         description="Shared progress for Husband and Wife, independent of the active personal-goal profile."
         actions={(
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge tone="information">Shared by both profiles</StatusBadge>
+            <StatusBadge tone="profile-shared">Shared by both profiles</StatusBadge>
             <Button disabled={!canCreate || challengeState.mutating} onClick={beginCreate}>
               Add challenge
             </Button>
@@ -192,21 +213,24 @@ export default function CoupleChallengesPanel({ participantUserProfileIds }: Cou
       ) : null}
 
       {challengeState.refreshing ? <LoadingState compact message="Refreshing shared challenges..." /> : null}
-      {actionError || challengeState.error ? (
+      {visibleError ? (
         <Alert
           tone="error"
-          title="Unable to update shared challenges"
-          action={<Button variant="secondary" size="compact" disabled={challengeState.mutating} onClick={challengeState.reload}>Retry</Button>}
+          title="Unable to load or update shared challenges"
+          action={<Button variant="secondary" size="compact" disabled={challengeState.mutating} onClick={retryChallenges}>Retry</Button>}
         >
-          {actionError ?? challengeState.error}
+          {visibleError}
         </Alert>
       ) : null}
       {successMessage ? <Alert tone="success">{successMessage}</Alert> : null}
 
       {initialLoading ? (
         <LoadingState message="Loading shared couple challenges..." />
-      ) : challengeState.challenges.length === 0 ? (
+      ) : challengeState.challenges.length === 0 && visibleError === null ? (
         <EmptyState
+          className="border-profile-shared/30 bg-profile-shared-surface/40"
+          icon={<TrackingIcon name="shared" />}
+          iconTone="shared"
           title="No shared challenges match this filter"
           description="Choose another status or create a challenge for both profiles."
         />
@@ -232,7 +256,14 @@ export default function CoupleChallengesPanel({ participantUserProfileIds }: Cou
           <SectionHeader
             headingId="couple-achievements-heading"
             headingLevel={3}
-            title="Couple achievements"
+            title={(
+              <span className="flex min-w-0 items-center gap-2">
+                <IconContainer aria-hidden="true" tone="shared" size="small">
+                  <TrackingIcon name="achievement" />
+                </IconContainer>
+                <span>Couple achievements</span>
+              </span>
+            )}
             description="Achievements earned through shared challenges."
           />
           <div className="grid min-w-0 gap-3 sm:grid-cols-2">

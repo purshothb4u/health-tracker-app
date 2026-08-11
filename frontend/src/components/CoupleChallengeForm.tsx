@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import type { ChallengeType, CoupleChallenge, CoupleChallengeRequest } from '../types/CoupleChallenge'
 import { CHALLENGE_TYPE_LABELS } from '../types/CoupleChallenge'
+import TrackingIcon from './TrackingIcon'
 import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
 import { Field } from './ui/Field'
+import { IconContainer } from './ui/IconContainer'
 import { SectionHeader } from './ui/SectionHeader'
+import { StatusBadge } from './ui/StatusBadge'
 
 interface CoupleChallengeFormProps {
   editingChallenge: CoupleChallenge | null
@@ -95,28 +98,34 @@ export default function CoupleChallengeForm({
         participantUserProfileIds: [...participantUserProfileIds],
         notes: notes || null,
       })
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Failed to save couple challenge.')
+    } catch {
+      // The shared-challenges panel presents API errors from the shared hook.
     }
   }
 
-  const inputClass = 'min-h-11 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-primary shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-focus disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-app-secondary'
+  const inputClass = 'min-h-11 w-full min-w-0 rounded-control border border-app-border bg-app-surface px-3 py-2 text-sm text-app-primary shadow-sm focus-visible:border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:bg-app-border-muted disabled:text-app-secondary'
 
   return (
-    <Card padding="normal" className="min-w-0 border-information-border bg-information-surface/30">
-      <SectionHeader
-        headingId="couple-challenge-form-heading"
-        headingLevel={3}
-        title={editingChallenge ? 'Edit shared challenge' : 'Create shared challenge'}
-        description={editingChallenge
-          ? 'Challenge type and participant membership remain fixed while editing.'
-          : 'Both loaded profiles participate automatically.'}
-        actions={(
-          <Button variant="secondary" disabled={mutating} onClick={onCancel}>
-            {editingChallenge ? 'Cancel edit' : 'Cancel'}
-          </Button>
-        )}
-      />
+    <Card padding="normal" className="min-w-0 border-profile-shared/30 bg-app-surface">
+      <div className="flex min-w-0 items-start gap-3">
+        <IconContainer aria-hidden="true" tone="shared">
+          <TrackingIcon name={editingChallenge ? 'shared' : 'plus'} />
+        </IconContainer>
+        <SectionHeader
+          className="min-w-0 flex-1"
+          headingId="couple-challenge-form-heading"
+          headingLevel={3}
+          title={editingChallenge ? 'Edit shared challenge' : 'Create shared challenge'}
+          description={editingChallenge
+            ? 'Challenge type and participant membership remain fixed while editing.'
+            : 'Both loaded profiles participate automatically.'}
+          actions={(
+            <StatusBadge tone="profile-shared">
+              {editingChallenge ? 'Editing challenge' : 'Two participants'}
+            </StatusBadge>
+          )}
+        />
+      </div>
       <form
         className="mt-5 space-y-5"
         aria-describedby={formError ? 'couple-challenge-form-error' : undefined}
@@ -172,9 +181,14 @@ export default function CoupleChallengeForm({
           </Field>
         </div>
         {formError ? <Alert id="couple-challenge-form-error" tone="error" title="Unable to save challenge">{formError}</Alert> : null}
-        <Button className="w-full sm:w-auto" disabled={mutating} type="submit">
-          {mutating ? 'Saving challenge...' : editingChallenge ? 'Save challenge changes' : 'Create challenge'}
-        </Button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <Button variant="secondary" className="w-full sm:w-auto" disabled={mutating} onClick={onCancel}>
+            {editingChallenge ? 'Cancel edit' : 'Cancel'}
+          </Button>
+          <Button className="w-full sm:w-auto" disabled={mutating} type="submit">
+            {mutating ? 'Saving challenge...' : editingChallenge ? 'Save challenge changes' : 'Create challenge'}
+          </Button>
+        </div>
       </form>
     </Card>
   )

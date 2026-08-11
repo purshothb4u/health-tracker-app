@@ -3,8 +3,10 @@ import { CHALLENGE_STATUS_LABELS, CHALLENGE_TYPE_LABELS } from '../types/CoupleC
 import { formatLocalDate } from '../utils/dateFormatting'
 import CoupleProgressComparison from './CoupleProgressComparison'
 import GoalCheckInControl from './GoalCheckInControl'
+import TrackingIcon from './TrackingIcon'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
+import { IconContainer } from './ui/IconContainer'
 import { LoadingState } from './ui/LoadingState'
 import { StatusBadge, type StatusBadgeTone } from './ui/StatusBadge'
 
@@ -25,6 +27,12 @@ function statusTone(status: ChallengeStatus): StatusBadgeTone {
   return 'neutral'
 }
 
+function participantCheckInTone(profileName: string): 'husband' | 'wife' | 'shared' {
+  if (profileName === 'Husband') return 'husband'
+  if (profileName === 'Wife') return 'wife'
+  return 'shared'
+}
+
 export default function CoupleChallengeCard({
   challenge,
   progress,
@@ -37,13 +45,27 @@ export default function CoupleChallengeCard({
   const editable = challenge.status === 'UPCOMING' || challenge.status === 'ACTIVE'
 
   return (
-    <Card as="article" padding="normal" className="min-w-0 space-y-5">
+    <Card
+      as="article"
+      padding="normal"
+      elevated={challenge.status === 'ACTIVE'}
+      className="min-w-0 space-y-5 border-profile-shared/30 bg-profile-shared-surface/55"
+    >
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h3 className="break-words text-lg font-semibold text-app-primary">{challenge.title}</h3>
-          <p className="mt-1 break-words text-sm leading-6 text-app-secondary">
-            {CHALLENGE_TYPE_LABELS[challenge.challengeType]} &middot; {formatLocalDate(challenge.startDate)} to {formatLocalDate(challenge.endDate)}
-          </p>
+        <div className="flex min-w-0 items-start gap-3">
+          <IconContainer aria-hidden="true" tone="shared">
+            <TrackingIcon name="shared" />
+          </IconContainer>
+          <div className="min-w-0">
+            <p className="text-metadata font-semibold text-app-secondary">{CHALLENGE_TYPE_LABELS[challenge.challengeType]}</p>
+            <h3 className="mt-1 break-words text-card-title text-app-primary">{challenge.title}</h3>
+            <p className="mt-1 break-words text-supporting text-app-secondary">
+              {formatLocalDate(challenge.startDate)} to {formatLocalDate(challenge.endDate)}
+            </p>
+            <p className="mt-1 break-words text-metadata font-medium text-app-secondary">
+              {challenge.participants.map((participant) => participant.profileName).join(' and ')}
+            </p>
+          </div>
         </div>
         <StatusBadge tone={statusTone(challenge.status)}>
           {CHALLENGE_STATUS_LABELS[challenge.status]}
@@ -51,7 +73,7 @@ export default function CoupleChallengeCard({
       </div>
 
       {challenge.notes ? (
-        <p className="whitespace-pre-wrap break-words text-sm leading-6 text-app-secondary">
+        <p className="rounded-control border border-profile-shared/20 bg-app-surface/85 px-4 py-3 whitespace-pre-wrap break-words text-supporting text-app-secondary">
           {challenge.notes}
         </p>
       ) : null}
@@ -71,6 +93,7 @@ export default function CoupleChallengeCard({
               label={`${participant.profileName} challenge check-in`}
               mutating={mutating}
               startDate={challenge.startDate}
+              tone={participantCheckInTone(participant.profileName)}
               onSubmit={(date, data) => onCheckIn(
                 challenge.id,
                 participant.userProfileId,
@@ -83,7 +106,7 @@ export default function CoupleChallengeCard({
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-2 border-t border-app-border pt-4 sm:flex-row sm:flex-wrap" aria-label={`Actions for ${challenge.title}`}>
+      <div className="flex flex-col gap-2 border-t border-profile-shared/25 pt-4 sm:flex-row sm:flex-wrap" role="group" aria-label={`Actions for ${challenge.title}`}>
         {editable ? (
           <Button variant="secondary" disabled={mutating} aria-label={`Edit ${challenge.title}`} onClick={() => onEdit(challenge)}>
             Edit
