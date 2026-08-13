@@ -55,6 +55,7 @@ public class UserProfileService {
 
     private UserProfile mapToEntity(UserProfile profile, UserProfileRequest request) {
         profile.setName(request.name());
+        profile.setDisplayName(request.name());
         profile.setGender(request.gender());
         profile.setAge(request.age());
         profile.setHeightCm(request.heightCm());
@@ -66,8 +67,13 @@ public class UserProfileService {
 
     private void mapMutableFields(UserProfile profile, UserProfileRequest request) {
         profile.setName(request.name());
+        if (profile.getDisplayName() == null || profile.getDisplayName().isBlank()) {
+            profile.setDisplayName(request.name());
+        }
         profile.setGender(request.gender());
-        profile.setAge(request.age());
+        profile.setAge(profile.getDateOfBirth() == null
+                ? request.age()
+                : profile.getEffectiveAge());
         profile.setHeightCm(request.heightCm());
         profile.setTargetWeightKg(request.targetWeightKg());
     }

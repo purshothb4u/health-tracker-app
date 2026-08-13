@@ -5,6 +5,7 @@ import type {
   OverviewSectionState,
   UseOverviewDataResult,
 } from '../../hooks/useOverviewData'
+import type { UseDailyTargetsResult } from '../../hooks/useDailyTargets'
 import type { HealthSummary } from '../../types/HealthMetric'
 import type { HydrationSummary } from '../../types/WaterTracking'
 import type { DailyActivitySummary } from '../../types/ActivityTracking'
@@ -26,6 +27,7 @@ interface OverviewStatusCardsProps {
   hydration: UseOverviewDataResult['hydration']
   activity: UseOverviewDataResult['activity']
   sleep: UseOverviewDataResult['sleep']
+  dailyTargets: UseDailyTargetsResult
 }
 
 interface StatusCardProps<T> {
@@ -142,17 +144,73 @@ function HealthCardContent({ data, profile }: { data: HealthSummary; profile: Us
   )
 }
 
-function NutritionCardContent({ data }: { data: OverviewNutritionData }) {
+function NutritionTargetStatus({
+  dailyTargets,
+}: {
+  dailyTargets: UseDailyTargetsResult
+}) {
+  if (dailyTargets.loading && dailyTargets.data === null) {
+    return <LoadingState compact message="Loading estimated calorie target..." />
+  }
+  if (dailyTargets.loading) {
+    return <LoadingState compact message="Refreshing estimated calorie target..." />
+  }
+  if (dailyTargets.error !== null) {
+    return (
+      <Alert tone="warning" title="Estimated target unavailable">
+        Nutrition totals remain available.
+      </Alert>
+    )
+  }
+  if (dailyTargets.data !== null && !dailyTargets.data.calorieTargetsAvailable) {
+    return (
+      <p className="break-words text-supporting text-app-secondary">
+        Estimated target: {dailyTargets.data.calorieTargetsUnavailableReason ?? 'Not available'}
+      </p>
+    )
+  }
+  return null
+}
+
+function NutritionCardContent({
+  data,
+  dailyTargets,
+}: {
+  data: OverviewNutritionData
+  dailyTargets: UseDailyTargetsResult
+}) {
+  const calorieTarget = dailyTargets.data?.estimatedCalorieTargetKcal ?? null
   if (data.foodEntryCount === 0) {
-    return <NotLogged countLabel="food entries" />
+    return (
+      <div className="space-y-3">
+        <NotLogged countLabel="food entries" />
+        {calorieTarget !== null ? (
+          <p className="break-words text-supporting text-app-secondary">
+            Estimated daily target: <span className="font-semibold tabular-nums text-app-primary">
+              {formatNumber(calorieTarget)} kcal
+            </span>
+          </p>
+        ) : null}
+        <NutritionTargetStatus dailyTargets={dailyTargets} />
+      </div>
+    )
   }
 
   const { summary } = data
   return (
     <>
       <p className="break-words text-[1.5rem] font-bold leading-tight tracking-tight tabular-nums text-app-primary">
-        {formatNumber(summary.totalCalories)} kcal
+        {formatNumber(summary.totalCalories)}
+        {calorieTarget === null ? null : (
+          <span className="text-lg font-semibold text-app-secondary">
+            {' '}/ {formatNumber(calorieTarget)}
+          </span>
+        )}
+        {' '}kcal
       </p>
+      {calorieTarget !== null ? (
+        <p className="text-supporting text-app-secondary">Consumed / estimated daily target</p>
+      ) : null}
       <dl className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
         <Detail label="Entries" value={formatNumber(data.foodEntryCount)} />
         <Detail label="Protein" value={`${formatNumber(summary.totalProteinGrams)} g`} />
@@ -165,6 +223,7 @@ function NutritionCardContent({ data }: { data: OverviewNutritionData }) {
             : `${formatNumber(summary.maintenanceCalories)} kcal`}
         />
       </dl>
+      <NutritionTargetStatus dailyTargets={dailyTargets} />
     </>
   )
 }
@@ -271,6 +330,7 @@ export default function OverviewStatusCards({
   hydration,
   activity,
   sleep,
+  dailyTargets,
 }: OverviewStatusCardsProps) {
   return (
     <section aria-labelledby="today-status-heading" className="min-w-0 space-y-4">
@@ -316,7 +376,7 @@ export default function OverviewStatusCards({
 
         <div className="grid min-w-0 grid-cols-1 gap-4 min-[390px]:grid-cols-2">
           <StatusCard title="Nutrition" icon="nutrition" tone="nutrition" state={nutrition}>
-            {(data) => <NutritionCardContent data={data} />}
+            {(data) => <NutritionCardContent dailyTargets={dailyTargets} data={data} />}
           </StatusCard>
           <StatusCard title="Hydration" icon="hydration" tone="hydration" state={hydration}>
             {(data) => <HydrationCardContent data={data} />}

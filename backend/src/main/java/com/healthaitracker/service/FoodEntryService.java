@@ -1,14 +1,13 @@
 package com.healthaitracker.service;
 
 import com.healthaitracker.dto.DailyNutritionSummary;
+import com.healthaitracker.dto.DailyTargetsResponse;
 import com.healthaitracker.dto.FoodEntryRequest;
 import com.healthaitracker.dto.FoodEntryResponse;
 import com.healthaitracker.entity.FoodEntry;
-import com.healthaitracker.entity.HealthMetric;
 import com.healthaitracker.entity.UserProfile;
 import com.healthaitracker.exception.ResourceNotFoundException;
 import com.healthaitracker.repository.FoodEntryRepository;
-import com.healthaitracker.repository.HealthMetricRepository;
 import com.healthaitracker.repository.UserProfileRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,18 +24,15 @@ public class FoodEntryService {
 
     private final FoodEntryRepository foodEntryRepository;
     private final UserProfileRepository userProfileRepository;
-    private final HealthMetricRepository healthMetricRepository;
-    private final HealthCalculationService healthCalculationService;
+    private final DailyTargetCalculationService dailyTargetCalculationService;
 
     public FoodEntryService(
             FoodEntryRepository foodEntryRepository,
             UserProfileRepository userProfileRepository,
-            HealthMetricRepository healthMetricRepository,
-            HealthCalculationService healthCalculationService) {
+            DailyTargetCalculationService dailyTargetCalculationService) {
         this.foodEntryRepository = foodEntryRepository;
         this.userProfileRepository = userProfileRepository;
-        this.healthMetricRepository = healthMetricRepository;
-        this.healthCalculationService = healthCalculationService;
+        this.dailyTargetCalculationService = dailyTargetCalculationService;
     }
 
     public List<FoodEntryResponse> getFoodEntries(Long userProfileId, LocalDate entryDate) {
@@ -59,7 +55,8 @@ public class FoodEntryService {
         BigDecimal totalProteinGrams = sum(foodEntries, FoodEntry::getProteinG);
         BigDecimal totalCarbohydrateGrams = sum(foodEntries, FoodEntry::getCarbohydratesG);
         BigDecimal totalFatGrams = sum(foodEntries, FoodEntry::getFatG);
-        BigDecimal maintenanceCalories = calculateMaintenanceCalories(profile);
+        DailyTargetsResponse dailyTargets = dailyTargetCalculationService.calculateForProfile(profile);
+        BigDecimal maintenanceCalories = dailyTargets.estimatedMaintenanceKcal();
         BigDecimal remainingCalories = maintenanceCalories == null
                 ? null
                 : maintenanceCalories.subtract(totalCalories);
@@ -111,21 +108,6 @@ public class FoodEntryService {
             throw new ResourceNotFoundException("Food entry not found with id: " + foodEntryId);
         }
         return foodEntry;
-    }
-
-    private BigDecimal calculateMaintenanceCalories(UserProfile profile) {
-        HealthMetric latestMetric = healthMetricRepository
-                .findFirstByUserProfileIdOrderByMetricDateDesc(profile.getId())
-                .orElse(null);
-        BigDecimal weightKg = latestMetric == null
-                ? BigDecimal.valueOf(profile.getCurrentWeightKg())
-                : latestMetric.getWeightKg();
-        BigDecimal bmr = healthCalculationService.calculateBmr(
-                weightKg,
-                BigDecimal.valueOf(profile.getHeightCm()),
-                profile.getAge(),
-                profile.getGender());
-        return healthCalculationService.calculateMaintenanceCalories(bmr);
     }
 
     private BigDecimal sum(List<FoodEntry> foodEntries, java.util.function.Function<FoodEntry, BigDecimal> valueExtractor) {

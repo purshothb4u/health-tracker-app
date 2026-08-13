@@ -9,6 +9,7 @@ import com.healthaitracker.dto.GoalStatusRequest;
 import com.healthaitracker.dto.ProgressCheckInRequest;
 import com.healthaitracker.entity.GoalStatus;
 import com.healthaitracker.service.AchievementService;
+import com.healthaitracker.service.AuthorizationService;
 import com.healthaitracker.service.GoalService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -33,16 +34,22 @@ public class GoalController {
 
     private final GoalService goalService;
     private final AchievementService achievementService;
+    private final AuthorizationService authorizationService;
 
-    public GoalController(GoalService goalService, AchievementService achievementService) {
+    public GoalController(
+            GoalService goalService,
+            AchievementService achievementService,
+            AuthorizationService authorizationService) {
         this.goalService = goalService;
         this.achievementService = achievementService;
+        this.authorizationService = authorizationService;
     }
 
     @PostMapping("/goals")
     public ResponseEntity<GoalResponse> createGoal(
             @PathVariable Long userId,
             @Valid @RequestBody GoalRequest request) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(goalService.createGoal(userId, request));
     }
@@ -51,6 +58,7 @@ public class GoalController {
     public ResponseEntity<List<GoalResponse>> getGoals(
             @PathVariable Long userId,
             @RequestParam(required = false) GoalStatus status) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(goalService.getGoals(userId, status));
     }
 
@@ -58,6 +66,7 @@ public class GoalController {
     public ResponseEntity<GoalResponse> getGoal(
             @PathVariable Long userId,
             @PathVariable Long goalId) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(goalService.getGoal(userId, goalId));
     }
 
@@ -66,6 +75,7 @@ public class GoalController {
             @PathVariable Long userId,
             @PathVariable Long goalId,
             @Valid @RequestBody GoalRequest request) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(goalService.updateGoal(userId, goalId, request));
     }
 
@@ -74,6 +84,7 @@ public class GoalController {
             @PathVariable Long userId,
             @PathVariable Long goalId,
             @Valid @RequestBody GoalStatusRequest request) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(goalService.updateGoalStatus(userId, goalId, request));
     }
 
@@ -81,6 +92,7 @@ public class GoalController {
     public ResponseEntity<Void> deleteGoal(
             @PathVariable Long userId,
             @PathVariable Long goalId) {
+        authorizationService.requireSelf(userId);
         goalService.deleteGoal(userId, goalId);
         return ResponseEntity.noContent().build();
     }
@@ -89,6 +101,7 @@ public class GoalController {
     public ResponseEntity<GoalProgressResponse> getGoalProgress(
             @PathVariable Long userId,
             @PathVariable Long goalId) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(goalService.getGoalProgress(userId, goalId, LocalDate.now()));
     }
 
@@ -98,12 +111,14 @@ public class GoalController {
             @PathVariable Long goalId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @Valid @RequestBody ProgressCheckInRequest request) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(goalService.upsertGoalCheckIn(userId, goalId, date, request));
     }
 
     @GetMapping("/goal-achievements")
     public ResponseEntity<List<AchievementResponse>> getGoalAchievements(
             @PathVariable Long userId) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(
                 achievementService.getGoalAchievements(userId, LocalDate.now()));
     }

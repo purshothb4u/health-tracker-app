@@ -2,6 +2,7 @@ package com.healthaitracker.controller;
 
 import com.healthaitracker.dto.UserProfileRequest;
 import com.healthaitracker.dto.UserProfileResponse;
+import com.healthaitracker.service.AuthorizationService;
 import com.healthaitracker.service.UserProfileService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -21,18 +22,24 @@ import java.util.List;
 public class UserProfileController {
 
     private final UserProfileService userProfileService;
+    private final AuthorizationService authorizationService;
 
-    public UserProfileController(UserProfileService userProfileService) {
+    public UserProfileController(
+            UserProfileService userProfileService,
+            AuthorizationService authorizationService) {
         this.userProfileService = userProfileService;
+        this.authorizationService = authorizationService;
     }
 
     @GetMapping
     public ResponseEntity<List<UserProfileResponse>> getAllProfiles() {
-        return ResponseEntity.ok(userProfileService.getAllProfiles());
+        return ResponseEntity.ok(List.of(userProfileService.getProfileById(
+                authorizationService.currentProfileId())));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<UserProfileResponse> getProfileById(@PathVariable Long id) {
+        authorizationService.requireSelf(id);
         return ResponseEntity.ok(userProfileService.getProfileById(id));
     }
 
@@ -46,6 +53,7 @@ public class UserProfileController {
     public ResponseEntity<UserProfileResponse> updateProfile(
             @PathVariable Long id,
             @Valid @RequestBody UserProfileRequest request) {
+        authorizationService.requireSelf(id);
         return ResponseEntity.ok(userProfileService.updateProfile(id, request));
     }
 }

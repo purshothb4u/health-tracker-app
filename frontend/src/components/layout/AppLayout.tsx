@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router'
+import AuthenticatedAccountControls from './AuthenticatedAccountControls'
 import PrimaryNavigation from './PrimaryNavigation'
-import ProfileSwitcher from './ProfileSwitcher'
 
 function BrandHeartIcon() {
   return (
@@ -66,9 +66,9 @@ export default function AppLayout() {
 
         <div className="mt-auto rounded-card border border-app-border-muted bg-app-background/70 p-3">
           <p className="mb-2.5 text-metadata font-semibold uppercase tracking-[0.14em] text-app-muted">
-            Active profile
+            Signed in
           </p>
-          <ProfileSwitcher />
+          <AuthenticatedAccountControls />
         </div>
       </aside>
 
@@ -79,7 +79,7 @@ export default function AppLayout() {
         >
           <div className="flex min-h-16 items-center justify-between gap-2.5 px-3 py-2.5 min-[390px]:px-4 sm:px-6">
             <ApplicationIdentity compact />
-            <ProfileSwitcher compact />
+            <AuthenticatedAccountControls compact />
           </div>
         </header>
 

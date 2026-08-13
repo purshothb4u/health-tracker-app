@@ -45,6 +45,11 @@ export interface CoupleChallengeParticipant {
   profileName: string
 }
 
+export interface EligibleCoupleParticipant {
+  profileId: number
+  displayName: string
+}
+
 export interface CoupleChallenge {
   id: number
   title: string

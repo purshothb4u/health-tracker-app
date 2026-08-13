@@ -3,6 +3,7 @@ package com.healthaitracker.controller;
 import com.healthaitracker.dto.DailyNutritionSummary;
 import com.healthaitracker.dto.FoodEntryRequest;
 import com.healthaitracker.dto.FoodEntryResponse;
+import com.healthaitracker.service.AuthorizationService;
 import com.healthaitracker.service.FoodEntryService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.PastOrPresent;
@@ -29,15 +30,20 @@ import java.util.List;
 public class FoodEntryController {
 
     private final FoodEntryService foodEntryService;
+    private final AuthorizationService authorizationService;
 
-    public FoodEntryController(FoodEntryService foodEntryService) {
+    public FoodEntryController(
+            FoodEntryService foodEntryService,
+            AuthorizationService authorizationService) {
         this.foodEntryService = foodEntryService;
+        this.authorizationService = authorizationService;
     }
 
     @PostMapping("/food-entries")
     public ResponseEntity<FoodEntryResponse> createFoodEntry(
             @PathVariable Long userId,
             @Valid @RequestBody FoodEntryRequest request) {
+        authorizationService.requireSelf(userId);
         FoodEntryResponse created = foodEntryService.createFoodEntry(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -46,6 +52,7 @@ public class FoodEntryController {
     public ResponseEntity<List<FoodEntryResponse>> getFoodEntries(
             @PathVariable Long userId,
             @RequestParam("date") @PastOrPresent @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate entryDate) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(foodEntryService.getFoodEntries(userId, entryDate));
     }
 
@@ -53,6 +60,7 @@ public class FoodEntryController {
     public ResponseEntity<FoodEntryResponse> getFoodEntry(
             @PathVariable Long userId,
             @PathVariable Long foodEntryId) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(foodEntryService.getFoodEntry(userId, foodEntryId));
     }
 
@@ -61,6 +69,7 @@ public class FoodEntryController {
             @PathVariable Long userId,
             @PathVariable Long foodEntryId,
             @Valid @RequestBody FoodEntryRequest request) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(foodEntryService.updateFoodEntry(userId, foodEntryId, request));
     }
 
@@ -68,6 +77,7 @@ public class FoodEntryController {
     public ResponseEntity<Void> deleteFoodEntry(
             @PathVariable Long userId,
             @PathVariable Long foodEntryId) {
+        authorizationService.requireSelf(userId);
         foodEntryService.deleteFoodEntry(userId, foodEntryId);
         return ResponseEntity.noContent().build();
     }
@@ -76,6 +86,7 @@ public class FoodEntryController {
     public ResponseEntity<DailyNutritionSummary> getDailyNutritionSummary(
             @PathVariable Long userId,
             @RequestParam("date") @PastOrPresent @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate entryDate) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(foodEntryService.getDailyNutritionSummary(userId, entryDate));
     }
 }

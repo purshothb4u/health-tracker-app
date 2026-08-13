@@ -2,6 +2,7 @@ package com.healthaitracker.controller;
 
 import com.healthaitracker.dto.AnalyticsResponse;
 import com.healthaitracker.service.AnalyticsService;
+import com.healthaitracker.service.AuthorizationService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,9 +18,13 @@ import java.time.LocalDate;
 public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
+    private final AuthorizationService authorizationService;
 
-    public AnalyticsController(AnalyticsService analyticsService) {
+    public AnalyticsController(
+            AnalyticsService analyticsService,
+            AuthorizationService authorizationService) {
         this.analyticsService = analyticsService;
+        this.authorizationService = authorizationService;
     }
 
     @GetMapping("/analytics")
@@ -27,6 +32,7 @@ public class AnalyticsController {
             @PathVariable Long userId,
             @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(analyticsService.getAnalytics(userId, fromDate, toDate));
     }
 }

@@ -27,6 +27,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -47,24 +48,29 @@ public class CoupleChallengeService {
     private final ChallengeCheckInRepository checkInRepository;
     private final UserProfileRepository userProfileRepository;
     private final ProgressCalculationService progressCalculationService;
+    private final AuthorizationService authorizationService;
 
     public CoupleChallengeService(
             CoupleChallengeRepository challengeRepository,
             CoupleChallengeParticipantRepository participantRepository,
             ChallengeCheckInRepository checkInRepository,
             UserProfileRepository userProfileRepository,
-            ProgressCalculationService progressCalculationService) {
+            ProgressCalculationService progressCalculationService,
+            AuthorizationService authorizationService) {
         this.challengeRepository = challengeRepository;
         this.participantRepository = participantRepository;
         this.checkInRepository = checkInRepository;
         this.userProfileRepository = userProfileRepository;
         this.progressCalculationService = progressCalculationService;
+        this.authorizationService = authorizationService;
     }
 
     @Transactional
     public CoupleChallengeResponse createChallenge(CoupleChallengeRequest request, LocalDate today) {
         validateToday(today);
         ValidatedChallengeRequest validated = validateChallengeRequest(request);
+        authorizationService.requireChallengeCreationParticipants(
+                validated.participantUserProfileIds());
         List<UserProfile> profiles = findParticipantProfiles(validated.participantUserProfileIds());
 
         CoupleChallenge challenge = new CoupleChallenge();
@@ -91,20 +97,28 @@ public class CoupleChallengeService {
             ChallengeStatus optionalStatus,
             LocalDate today) {
         validateToday(today);
-        return challengeRepository.findAllByOrderByCreatedAtAscIdAsc().stream()
+        return participantRepository.findChallengesByUserProfileId(
+                        authorizationService.currentProfileId()).stream()
+                .sorted(Comparator
+                        .comparing(CoupleChallenge::getCreatedAt)
+                        .thenComparing(CoupleChallenge::getId))
                 .filter(challenge -> optionalStatus == null
                         || effectiveStatus(challenge, today) == optionalStatus)
-                .map(challenge -> toChallengeResponse(
-                        challenge,
-                        findParticipants(challenge.getId()),
-                        today))
+                .map(challenge -> {
+                    List<CoupleChallengeParticipant> participants =
+                            findParticipants(challenge.getId());
+                    authorizationService.requireChallengeAccess(participants);
+                    return toChallengeResponse(challenge, participants, today);
+                })
                 .toList();
     }
 
     public CoupleChallengeResponse getChallenge(Long challengeId, LocalDate today) {
         validateToday(today);
         CoupleChallenge challenge = findChallengeOrThrow(challengeId);
-        return toChallengeResponse(challenge, findParticipants(challengeId), today);
+        List<CoupleChallengeParticipant> participants = findParticipants(challengeId);
+        authorizationService.requireChallengeAccess(participants);
+        return toChallengeResponse(challenge, participants, today);
     }
 
     @Transactional
@@ -114,12 +128,15 @@ public class CoupleChallengeService {
             LocalDate today) {
         validateToday(today);
         CoupleChallenge challenge = findChallengeOrThrow(challengeId);
+        List<CoupleChallengeParticipant> participants = findParticipants(challengeId);
+        authorizationService.requireChallengeAccess(participants);
         requireNonTerminal(challenge, today, "Completed and cancelled challenges cannot be edited");
         ValidatedChallengeRequest validated = validateChallengeRequest(request);
+        authorizationService.requireChallengeCreationParticipants(
+                validated.participantUserProfileIds());
         if (challenge.getChallengeType() != validated.challengeType()) {
             throw new IllegalArgumentException("Challenge type cannot be changed after creation");
         }
-        List<CoupleChallengeParticipant> participants = findParticipants(challengeId);
         validateImmutableParticipants(participants, validated.participantUserProfileIds());
         findParticipantProfiles(validated.participantUserProfileIds());
         rejectDateRangeExcludingCheckIns(
@@ -137,6 +154,8 @@ public class CoupleChallengeService {
             LocalDate today) {
         validateToday(today);
         CoupleChallenge challenge = findChallengeOrThrow(challengeId);
+        List<CoupleChallengeParticipant> participants = findParticipants(challengeId);
+        authorizationService.requireChallengeAccess(participants);
         if (request == null || request.status() == null) {
             throw new IllegalArgumentException("Challenge status is required");
         }
@@ -161,13 +180,14 @@ public class CoupleChallengeService {
         }
         return toChallengeResponse(
                 challengeRepository.save(challenge),
-                findParticipants(challengeId),
+                participants,
                 today);
     }
 
     @Transactional
     public void deleteChallenge(Long challengeId) {
         CoupleChallenge challenge = findChallengeOrThrow(challengeId);
+        authorizationService.requireChallengeAccess(findParticipants(challengeId));
         checkInRepository.deleteByParticipantCoupleChallengeId(challengeId);
         participantRepository.deleteByCoupleChallengeId(challengeId);
         challengeRepository.delete(challenge);
@@ -179,6 +199,7 @@ public class CoupleChallengeService {
         validateToday(today);
         CoupleChallenge challenge = findChallengeOrThrow(challengeId);
         List<CoupleChallengeParticipant> participants = findParticipants(challengeId);
+        authorizationService.requireChallengeAccess(participants);
         if (participants.size() != 2) {
             throw new IllegalStateException("A couple challenge must have exactly two participants");
         }
@@ -229,6 +250,7 @@ public class CoupleChallengeService {
             LocalDate today) {
         validateToday(today);
         CoupleChallenge challenge = findChallengeOrThrow(challengeId);
+        authorizationService.requireChallengeAccess(findParticipants(challengeId));
         requireNonTerminal(
                 challenge,
                 today,

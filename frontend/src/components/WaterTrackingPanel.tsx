@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useWaterTracking } from '../hooks/useWaterTracking'
+import type { DailyTargets } from '../types/DailyTargets'
 import type { WaterEntry, WaterEntryRequest, WaterGoal, WaterGoalRequest } from '../types/WaterTracking'
 import { formatLocalDate } from '../utils/dateFormatting'
 import HydrationSummaryCard from './HydrationSummaryCard'
@@ -19,6 +20,8 @@ import { SectionHeader } from './ui/SectionHeader'
 interface WaterTrackingPanelProps {
   userProfileId: number
   profileName: string
+  dailyTargets: DailyTargets | null
+  dailyTargetsLoading: boolean
 }
 
 function getTodayLocalDate(): string {
@@ -33,7 +36,12 @@ function getErrorMessage(error: unknown, fallbackMessage: string): string {
   return error instanceof Error ? error.message : fallbackMessage
 }
 
-export default function WaterTrackingPanel({ userProfileId, profileName }: WaterTrackingPanelProps) {
+export default function WaterTrackingPanel({
+  userProfileId,
+  profileName,
+  dailyTargets,
+  dailyTargetsLoading,
+}: WaterTrackingPanelProps) {
   const {
     selectedDate,
     setSelectedDate,
@@ -185,7 +193,13 @@ export default function WaterTrackingPanel({ userProfileId, profileName }: Water
 
       {hasLoadedData && goal && (
         <>
-          {summary && <HydrationSummaryCard summary={summary} />}
+          {summary && (
+            <HydrationSummaryCard
+              dailyTargets={dailyTargets}
+              dailyTargetsLoading={dailyTargetsLoading}
+              summary={summary}
+            />
+          )}
           <div className="grid min-w-0 gap-5 xl:grid-cols-2 xl:items-start">
             <WaterGoalEditor goal={goal} mutating={mutating} onUpdateGoal={handleGoalUpdate} />
             <WaterQuickAdd mutating={mutating} onAdd={handleQuickAdd} />

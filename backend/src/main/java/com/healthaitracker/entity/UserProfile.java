@@ -13,11 +13,12 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
 
 @Entity
 @Table(name = "user_profiles")
@@ -32,36 +33,45 @@ public class UserProfile {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @NotNull
+    @Size(max = 100)
+    @Column(name = "display_name", length = 100)
+    private String displayName;
+
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(length = 20)
     private Gender gender;
 
-    @NotNull
     @Min(1)
     @Max(150)
-    @Column(nullable = false)
+    @Column
     private Integer age;
 
-    @NotNull
     @Positive
-    @Column(name = "height_cm", nullable = false)
+    @Column(name = "height_cm")
     private Double heightCm;
 
-    @NotNull
     @Positive
-    @Column(name = "starting_weight_kg", nullable = false)
+    @Column(name = "starting_weight_kg")
     private Double startingWeightKg;
 
-    @NotNull
     @Positive
-    @Column(name = "current_weight_kg", nullable = false)
+    @Column(name = "current_weight_kg")
     private Double currentWeightKg;
 
-    @NotNull
     @Positive
-    @Column(name = "target_weight_kg", nullable = false)
+    @Column(name = "target_weight_kg")
     private Double targetWeightKg;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "activity_level", length = 30)
+    private ActivityLevel activityLevel;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "goal_type", length = 30)
+    private ProfileGoalType goalType;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -95,6 +105,22 @@ public class UserProfile {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
     }
 
     public Gender getGender() {
@@ -143,6 +169,29 @@ public class UserProfile {
 
     public void setTargetWeightKg(Double targetWeightKg) {
         this.targetWeightKg = targetWeightKg;
+    }
+
+    public ActivityLevel getActivityLevel() {
+        return activityLevel;
+    }
+
+    public void setActivityLevel(ActivityLevel activityLevel) {
+        this.activityLevel = activityLevel;
+    }
+
+    public ProfileGoalType getGoalType() {
+        return goalType;
+    }
+
+    public void setGoalType(ProfileGoalType goalType) {
+        this.goalType = goalType;
+    }
+
+    public Integer getEffectiveAge() {
+        if (dateOfBirth == null) {
+            return age;
+        }
+        return Period.between(dateOfBirth, LocalDate.now()).getYears();
     }
 
     public LocalDateTime getCreatedAt() {

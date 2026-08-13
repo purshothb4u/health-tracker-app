@@ -37,7 +37,7 @@ export default function HealthPage() {
         </div>
         {selectedProfile ? (
           <StatusBadge tone={profileTone(selectedProfile.name)}>
-            Selected profile: {selectedProfile.name} · {formatGender(selectedProfile.gender)} ·{' '}
+            Selected profile: {selectedProfile.displayName} · {formatGender(selectedProfile.gender)} ·{' '}
             {selectedProfile.age} years
           </StatusBadge>
         ) : null}

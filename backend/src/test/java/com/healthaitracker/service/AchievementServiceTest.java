@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,6 +47,8 @@ class AchievementServiceTest {
     private CoupleChallengeParticipantRepository participantRepository;
     @Mock
     private CoupleChallengeService coupleChallengeService;
+    @Mock
+    private AuthorizationService authorizationService;
 
     private AchievementService service;
     private UserProfile profile;
@@ -56,7 +60,9 @@ class AchievementServiceTest {
                 userProfileRepository,
                 progressCalculationService,
                 participantRepository,
-                coupleChallengeService);
+                coupleChallengeService,
+                authorizationService);
+        lenient().when(authorizationService.canAccessChallenge(anyList())).thenReturn(true);
         profile = new UserProfile();
         profile.setId(USER_ID);
         when(userProfileRepository.findById(USER_ID)).thenReturn(Optional.of(profile));

@@ -6,9 +6,11 @@ import com.healthaitracker.dto.ChallengeStatusRequest;
 import com.healthaitracker.dto.CoupleChallengeProgressResponse;
 import com.healthaitracker.dto.CoupleChallengeRequest;
 import com.healthaitracker.dto.CoupleChallengeResponse;
+import com.healthaitracker.dto.EligibleCoupleParticipantResponse;
 import com.healthaitracker.dto.ProgressCheckInRequest;
 import com.healthaitracker.entity.ChallengeStatus;
 import com.healthaitracker.service.AchievementService;
+import com.healthaitracker.service.AuthorizationService;
 import com.healthaitracker.service.CoupleChallengeService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -33,12 +35,15 @@ public class CoupleChallengeController {
 
     private final CoupleChallengeService challengeService;
     private final AchievementService achievementService;
+    private final AuthorizationService authorizationService;
 
     public CoupleChallengeController(
             CoupleChallengeService challengeService,
-            AchievementService achievementService) {
+            AchievementService achievementService,
+            AuthorizationService authorizationService) {
         this.challengeService = challengeService;
         this.achievementService = achievementService;
+        this.authorizationService = authorizationService;
     }
 
     @PostMapping("/couple-challenges")
@@ -52,6 +57,11 @@ public class CoupleChallengeController {
     public ResponseEntity<List<CoupleChallengeResponse>> getChallenges(
             @RequestParam(required = false) ChallengeStatus status) {
         return ResponseEntity.ok(challengeService.getChallenges(status, LocalDate.now()));
+    }
+
+    @GetMapping("/couple-challenges/eligible-participants")
+    public ResponseEntity<List<EligibleCoupleParticipantResponse>> getEligibleParticipants() {
+        return ResponseEntity.ok(authorizationService.getEligibleCoupleParticipants());
     }
 
     @GetMapping("/couple-challenges/{challengeId}")

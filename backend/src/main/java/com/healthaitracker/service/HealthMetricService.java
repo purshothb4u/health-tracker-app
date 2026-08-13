@@ -3,6 +3,7 @@ package com.healthaitracker.service;
 import com.healthaitracker.dto.HealthMetricRequest;
 import com.healthaitracker.dto.HealthMetricResponse;
 import com.healthaitracker.dto.HealthSummary;
+import com.healthaitracker.dto.DailyTargetsResponse;
 import com.healthaitracker.entity.HealthMetric;
 import com.healthaitracker.entity.UserProfile;
 import com.healthaitracker.exception.HealthMetricAlreadyExistsException;
@@ -23,14 +24,17 @@ public class HealthMetricService {
     private final HealthMetricRepository healthMetricRepository;
     private final UserProfileRepository userProfileRepository;
     private final HealthCalculationService healthCalculationService;
+    private final DailyTargetCalculationService dailyTargetCalculationService;
 
     public HealthMetricService(
             HealthMetricRepository healthMetricRepository,
             UserProfileRepository userProfileRepository,
-            HealthCalculationService healthCalculationService) {
+            HealthCalculationService healthCalculationService,
+            DailyTargetCalculationService dailyTargetCalculationService) {
         this.healthMetricRepository = healthMetricRepository;
         this.userProfileRepository = userProfileRepository;
         this.healthCalculationService = healthCalculationService;
+        this.dailyTargetCalculationService = dailyTargetCalculationService;
     }
 
     public List<HealthMetricResponse> getMetrics(Long userProfileId) {
@@ -53,12 +57,9 @@ public class HealthMetricService {
         HealthMetric latestMetric = healthMetricRepository
                 .findFirstByUserProfileIdOrderByMetricDateDesc(userProfileId)
                 .orElse(null);
-        BigDecimal latestWeightKg = latestMetric == null
-                ? BigDecimal.valueOf(profile.getCurrentWeightKg())
-                : latestMetric.getWeightKg();
+        DailyTargetsResponse dailyTargets = dailyTargetCalculationService.calculateForProfile(profile);
+        BigDecimal latestWeightKg = dailyTargets.currentWeightKg();
         BigDecimal heightCm = BigDecimal.valueOf(profile.getHeightCm());
-        BigDecimal bmr = healthCalculationService.calculateBmr(
-                latestWeightKg, heightCm, profile.getAge(), profile.getGender());
         HealthCalculationService.WeightProgress progress = healthCalculationService.calculateWeightProgress(
                 BigDecimal.valueOf(profile.getStartingWeightKg()),
                 latestWeightKg,
@@ -69,8 +70,8 @@ public class HealthMetricService {
                 latestWeightKg,
                 latestMetric == null ? null : latestMetric.getMetricDate(),
                 healthCalculationService.calculateBmi(latestWeightKg, heightCm),
-                bmr,
-                healthCalculationService.calculateMaintenanceCalories(bmr),
+                dailyTargets.bmrKcal(),
+                dailyTargets.estimatedMaintenanceKcal(),
                 progress.weightLostKg(),
                 progress.weightRemainingKg(),
                 progress.goalProgressPercent()

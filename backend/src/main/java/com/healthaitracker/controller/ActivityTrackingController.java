@@ -3,6 +3,7 @@ package com.healthaitracker.controller;
 import com.healthaitracker.dto.ActivityEntryRequest;
 import com.healthaitracker.dto.ActivityEntryResponse;
 import com.healthaitracker.dto.DailyActivitySummary;
+import com.healthaitracker.service.AuthorizationService;
 import com.healthaitracker.service.ActivityTrackingService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.PastOrPresent;
@@ -29,15 +30,20 @@ import java.util.List;
 public class ActivityTrackingController {
 
     private final ActivityTrackingService activityTrackingService;
+    private final AuthorizationService authorizationService;
 
-    public ActivityTrackingController(ActivityTrackingService activityTrackingService) {
+    public ActivityTrackingController(
+            ActivityTrackingService activityTrackingService,
+            AuthorizationService authorizationService) {
         this.activityTrackingService = activityTrackingService;
+        this.authorizationService = authorizationService;
     }
 
     @PostMapping("/activity-entries")
     public ResponseEntity<ActivityEntryResponse> createActivityEntry(
             @PathVariable Long userId,
             @Valid @RequestBody ActivityEntryRequest request) {
+        authorizationService.requireSelf(userId);
         ActivityEntryResponse created = activityTrackingService.createActivityEntry(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -47,6 +53,7 @@ public class ActivityTrackingController {
             @PathVariable Long userId,
             @RequestParam("date") @PastOrPresent @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate activityDate) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(activityTrackingService.getActivityEntries(userId, activityDate));
     }
 
@@ -54,6 +61,7 @@ public class ActivityTrackingController {
     public ResponseEntity<ActivityEntryResponse> getActivityEntry(
             @PathVariable Long userId,
             @PathVariable Long activityEntryId) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(activityTrackingService.getActivityEntry(userId, activityEntryId));
     }
 
@@ -62,6 +70,7 @@ public class ActivityTrackingController {
             @PathVariable Long userId,
             @PathVariable Long activityEntryId,
             @Valid @RequestBody ActivityEntryRequest request) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(
                 activityTrackingService.updateActivityEntry(userId, activityEntryId, request));
     }
@@ -70,6 +79,7 @@ public class ActivityTrackingController {
     public ResponseEntity<Void> deleteActivityEntry(
             @PathVariable Long userId,
             @PathVariable Long activityEntryId) {
+        authorizationService.requireSelf(userId);
         activityTrackingService.deleteActivityEntry(userId, activityEntryId);
         return ResponseEntity.noContent().build();
     }
@@ -79,6 +89,7 @@ public class ActivityTrackingController {
             @PathVariable Long userId,
             @RequestParam("date") @PastOrPresent @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate activityDate) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(activityTrackingService.getDailyActivitySummary(userId, activityDate));
     }
 }

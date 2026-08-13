@@ -1,6 +1,7 @@
 package com.healthaitracker.service;
 
 import com.healthaitracker.dto.AnalyticsResponse;
+import com.healthaitracker.dto.DailyTargetsResponse;
 import com.healthaitracker.dto.DailyNutritionDataPoint;
 import com.healthaitracker.dto.NutritionAnalytics;
 import com.healthaitracker.dto.WeightAnalytics;
@@ -38,16 +39,19 @@ public class AnalyticsService {
     private final HealthMetricRepository healthMetricRepository;
     private final FoodEntryRepository foodEntryRepository;
     private final HealthCalculationService healthCalculationService;
+    private final DailyTargetCalculationService dailyTargetCalculationService;
 
     public AnalyticsService(
             UserProfileRepository userProfileRepository,
             HealthMetricRepository healthMetricRepository,
             FoodEntryRepository foodEntryRepository,
-            HealthCalculationService healthCalculationService) {
+            HealthCalculationService healthCalculationService,
+            DailyTargetCalculationService dailyTargetCalculationService) {
         this.userProfileRepository = userProfileRepository;
         this.healthMetricRepository = healthMetricRepository;
         this.foodEntryRepository = foodEntryRepository;
         this.healthCalculationService = healthCalculationService;
+        this.dailyTargetCalculationService = dailyTargetCalculationService;
     }
 
     public AnalyticsResponse getAnalytics(Long userProfileId, LocalDate fromDate, LocalDate toDate) {
@@ -160,7 +164,8 @@ public class AnalyticsService {
         BigDecimal totalProteinGrams = sum(dailyDataPoints, DailyNutritionDataPoint::totalProteinGrams);
         BigDecimal totalCarbohydrateGrams = sum(dailyDataPoints, DailyNutritionDataPoint::totalCarbohydrateGrams);
         BigDecimal totalFatGrams = sum(dailyDataPoints, DailyNutritionDataPoint::totalFatGrams);
-        BigDecimal maintenanceCaloriesEstimate = calculateCurrentMaintenanceCaloriesEstimate(profile);
+        DailyTargetsResponse dailyTargets = dailyTargetCalculationService.calculateForProfile(profile);
+        BigDecimal maintenanceCaloriesEstimate = dailyTargets.estimatedMaintenanceKcal();
 
         Integer daysBelowMaintenance = null;
         Integer daysAtOrAboveMaintenance = null;
@@ -197,21 +202,6 @@ public class AnalyticsService {
                 sum(entries, FoodEntry::getFatG),
                 entries.size()
         );
-    }
-
-    private BigDecimal calculateCurrentMaintenanceCaloriesEstimate(UserProfile profile) {
-        HealthMetric latestMetric = healthMetricRepository
-                .findFirstByUserProfileIdOrderByMetricDateDesc(profile.getId())
-                .orElse(null);
-        BigDecimal currentWeightKg = latestMetric == null
-                ? BigDecimal.valueOf(profile.getCurrentWeightKg())
-                : latestMetric.getWeightKg();
-        BigDecimal bmr = healthCalculationService.calculateBmr(
-                currentWeightKg,
-                BigDecimal.valueOf(profile.getHeightCm()),
-                profile.getAge(),
-                profile.getGender());
-        return healthCalculationService.calculateMaintenanceCalories(bmr);
     }
 
     private UserProfile findUserProfileOrThrow(Long userProfileId) {

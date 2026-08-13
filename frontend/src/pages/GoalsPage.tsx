@@ -17,7 +17,6 @@ export default function GoalsPage() {
   const {
     profiles,
     selectedProfile,
-    participantUserProfileIds,
     loading,
     error,
     reloadProfiles,
@@ -35,7 +34,7 @@ export default function GoalsPage() {
         </div>
         {selectedProfile ? (
           <StatusBadge tone={profileTone(selectedProfile.name)}>
-            Personal goals: {selectedProfile.name}
+            Personal goals: {selectedProfile.displayName}
           </StatusBadge>
         ) : null}
       </header>
@@ -69,10 +68,10 @@ export default function GoalsPage() {
         <div className="grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] xl:items-start">
           <GoalsPanel
             key={selectedProfile.id}
-            profileName={selectedProfile.name}
+            profileName={selectedProfile.displayName}
             userProfileId={selectedProfile.id}
           />
-          <CoupleChallengesPanel participantUserProfileIds={participantUserProfileIds} />
+          <CoupleChallengesPanel />
         </div>
       ) : null}
     </div>

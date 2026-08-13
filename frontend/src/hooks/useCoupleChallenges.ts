@@ -6,6 +6,7 @@ import {
   fetchCoupleAchievements,
   fetchCoupleChallengeProgress,
   fetchCoupleChallenges,
+  fetchEligibleCoupleParticipants,
   updateCoupleChallenge,
   updateCoupleChallengeStatus,
   upsertChallengeCheckIn,
@@ -18,6 +19,7 @@ import type {
   CoupleChallenge,
   CoupleChallengeProgress,
   CoupleChallengeRequest,
+  EligibleCoupleParticipant,
   ProgressCheckInRequest,
 } from '../types/CoupleChallenge'
 
@@ -27,6 +29,7 @@ interface UseCoupleChallengesResult {
   challenges: CoupleChallenge[]
   progressByChallengeId: Record<number, CoupleChallengeProgress>
   achievementsByUserProfileId: Record<number, Achievement[]>
+  eligibleParticipants: EligibleCoupleParticipant[]
   loading: boolean
   refreshing: boolean
   mutating: boolean
@@ -67,15 +70,15 @@ function participantKey(ids: readonly number[]): string {
   return ids.join(':')
 }
 
-export function useCoupleChallenges(
-  participantUserProfileIds: readonly number[],
-): UseCoupleChallengesResult {
+export function useCoupleChallenges(): UseCoupleChallengesResult {
   const [statusFilter, setStatusFilterState] = useState<ChallengeStatus | null>(null)
   const [challenges, setChallenges] = useState<CoupleChallenge[]>([])
   const [progressByChallengeId, setProgressByChallengeId] =
     useState<Record<number, CoupleChallengeProgress>>({})
   const [achievementsByUserProfileId, setAchievementsByUserProfileId] =
     useState<Record<number, Achievement[]>>({})
+  const [eligibleParticipants, setEligibleParticipants] =
+    useState<EligibleCoupleParticipant[]>([])
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [mutating, setMutating] = useState(false)
@@ -85,9 +88,7 @@ export function useCoupleChallenges(
   const mutationInProgress = useRef(false)
   const loadedContext = useRef<string | null>(null)
   const mounted = useRef(true)
-  const suppliedParticipantKey = participantKey(participantUserProfileIds)
-  const currentParticipantKey = useRef(suppliedParticipantKey)
-  currentParticipantKey.current = suppliedParticipantKey
+  const currentParticipantKey = useRef('')
 
   useEffect(() => {
     mounted.current = true
@@ -110,20 +111,7 @@ export function useCoupleChallenges(
   useEffect(() => {
     const currentRequest = ++requestSequence.current
 
-    if (!validParticipantIds(participantUserProfileIds)) {
-      loadedContext.current = null
-      setChallenges([])
-      setProgressByChallengeId({})
-      setAchievementsByUserProfileId({})
-      setLoading(false)
-      setRefreshing(false)
-      setError(null)
-      return
-    }
-
-    const selectedParticipantIds = [...participantUserProfileIds] as [number, number]
-    const selectedParticipantKey = participantKey(selectedParticipantIds)
-    const contextKey = `${selectedParticipantKey}:${statusFilter ?? 'ALL'}`
+    const contextKey = statusFilter ?? 'ALL'
     const isBackgroundRefresh = loadedContext.current === contextKey
     if (isBackgroundRefresh) {
       setRefreshing(true)
@@ -140,22 +128,28 @@ export function useCoupleChallenges(
 
     async function loadChallenges() {
       try {
-        const [challengeData, achievementPairs] = await Promise.all([
+        const [participantData, challengeData] = await Promise.all([
+          fetchEligibleCoupleParticipants(),
           fetchCoupleChallenges(selectedStatus),
-          Promise.all(selectedParticipantIds.map(async (userProfileId) => [
+        ])
+        const participantIds = participantData.map((participant) => participant.profileId)
+        const achievementPairs = validParticipantIds(participantIds)
+          ? await Promise.all(participantIds.map(async (userProfileId) => [
             userProfileId,
             await fetchCoupleAchievements(userProfileId),
-          ] as const)),
-        ])
+          ] as const))
+          : []
         const progressData = await Promise.all(
           challengeData.map((challenge) => fetchCoupleChallengeProgress(challenge.id)),
         )
         if (!cancelled && currentRequest === requestSequence.current) {
+          setEligibleParticipants(participantData)
           setChallenges(challengeData)
           setProgressByChallengeId(Object.fromEntries(
             progressData.map((progress) => [progress.challengeId, progress]),
           ))
           setAchievementsByUserProfileId(Object.fromEntries(achievementPairs))
+          currentParticipantKey.current = participantKey(participantIds)
           loadedContext.current = contextKey
           setError(null)
         }
@@ -175,9 +169,12 @@ export function useCoupleChallenges(
     return () => {
       cancelled = true
     }
-  }, [reloadToken, statusFilter, suppliedParticipantKey])
+  }, [reloadToken, statusFilter])
 
   const beginMutation = useCallback((): string => {
+    const participantUserProfileIds = eligibleParticipants.map(
+      (participant) => participant.profileId,
+    )
     if (!validParticipantIds(participantUserProfileIds)) {
       const participantError = new Error(
         'Two valid distinct participant profiles are required for couple challenges',
@@ -200,7 +197,7 @@ export function useCoupleChallenges(
       setError(null)
     }
     return participantKey(participantUserProfileIds)
-  }, [participantUserProfileIds, suppliedParticipantKey])
+  }, [eligibleParticipants])
 
   const finishMutation = useCallback(() => {
     mutationInProgress.current = false
@@ -333,6 +330,7 @@ export function useCoupleChallenges(
     challenges,
     progressByChallengeId,
     achievementsByUserProfileId,
+    eligibleParticipants,
     loading,
     refreshing,
     mutating,

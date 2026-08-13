@@ -56,6 +56,8 @@ class CoupleChallengeServiceTest {
     private UserProfileRepository userProfileRepository;
     @Mock
     private ProgressCalculationService progressCalculationService;
+    @Mock
+    private AuthorizationService authorizationService;
 
     private CoupleChallengeService service;
     private UserProfile husband;
@@ -68,7 +70,8 @@ class CoupleChallengeServiceTest {
                 participantRepository,
                 checkInRepository,
                 userProfileRepository,
-                progressCalculationService);
+                progressCalculationService,
+                authorizationService);
         husband = profile(1L, "Husband");
         wife = profile(2L, "Wife");
     }

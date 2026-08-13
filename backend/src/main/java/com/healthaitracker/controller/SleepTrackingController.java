@@ -3,6 +3,7 @@ package com.healthaitracker.controller;
 import com.healthaitracker.dto.DailySleepSummary;
 import com.healthaitracker.dto.SleepEntryRequest;
 import com.healthaitracker.dto.SleepEntryResponse;
+import com.healthaitracker.service.AuthorizationService;
 import com.healthaitracker.service.SleepTrackingService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.PastOrPresent;
@@ -29,15 +30,20 @@ import java.util.List;
 public class SleepTrackingController {
 
     private final SleepTrackingService sleepTrackingService;
+    private final AuthorizationService authorizationService;
 
-    public SleepTrackingController(SleepTrackingService sleepTrackingService) {
+    public SleepTrackingController(
+            SleepTrackingService sleepTrackingService,
+            AuthorizationService authorizationService) {
         this.sleepTrackingService = sleepTrackingService;
+        this.authorizationService = authorizationService;
     }
 
     @PostMapping("/sleep-entries")
     public ResponseEntity<SleepEntryResponse> createSleepEntry(
             @PathVariable Long userId,
             @Valid @RequestBody SleepEntryRequest request) {
+        authorizationService.requireSelf(userId);
         SleepEntryResponse created = sleepTrackingService.createSleepEntry(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -47,6 +53,7 @@ public class SleepTrackingController {
             @PathVariable Long userId,
             @RequestParam("date") @PastOrPresent @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate sleepDate) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(sleepTrackingService.getSleepEntries(userId, sleepDate));
     }
 
@@ -54,6 +61,7 @@ public class SleepTrackingController {
     public ResponseEntity<SleepEntryResponse> getSleepEntry(
             @PathVariable Long userId,
             @PathVariable Long sleepEntryId) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(sleepTrackingService.getSleepEntry(userId, sleepEntryId));
     }
 
@@ -62,6 +70,7 @@ public class SleepTrackingController {
             @PathVariable Long userId,
             @PathVariable Long sleepEntryId,
             @Valid @RequestBody SleepEntryRequest request) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(
                 sleepTrackingService.updateSleepEntry(userId, sleepEntryId, request));
     }
@@ -70,6 +79,7 @@ public class SleepTrackingController {
     public ResponseEntity<Void> deleteSleepEntry(
             @PathVariable Long userId,
             @PathVariable Long sleepEntryId) {
+        authorizationService.requireSelf(userId);
         sleepTrackingService.deleteSleepEntry(userId, sleepEntryId);
         return ResponseEntity.noContent().build();
     }
@@ -79,6 +89,7 @@ public class SleepTrackingController {
             @PathVariable Long userId,
             @RequestParam("date") @PastOrPresent @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate sleepDate) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(sleepTrackingService.getDailySleepSummary(userId, sleepDate));
     }
 }

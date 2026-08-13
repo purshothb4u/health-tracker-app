@@ -32,18 +32,21 @@ public class AchievementService {
     private final ProgressCalculationService progressCalculationService;
     private final CoupleChallengeParticipantRepository participantRepository;
     private final CoupleChallengeService coupleChallengeService;
+    private final AuthorizationService authorizationService;
 
     public AchievementService(
             GoalRepository goalRepository,
             UserProfileRepository userProfileRepository,
             ProgressCalculationService progressCalculationService,
             CoupleChallengeParticipantRepository participantRepository,
-            CoupleChallengeService coupleChallengeService) {
+            CoupleChallengeService coupleChallengeService,
+            AuthorizationService authorizationService) {
         this.goalRepository = goalRepository;
         this.userProfileRepository = userProfileRepository;
         this.progressCalculationService = progressCalculationService;
         this.participantRepository = participantRepository;
         this.coupleChallengeService = coupleChallengeService;
+        this.authorizationService = authorizationService;
     }
 
     public List<AchievementResponse> getGoalAchievements(Long userProfileId, LocalDate today) {
@@ -102,12 +105,17 @@ public class AchievementService {
         userProfileRepository.findById(userProfileId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User profile not found with id: " + userProfileId));
+        authorizationService.requireProfileInCurrentHousehold(userProfileId);
         List<CoupleChallenge> challenges = participantRepository
                 .findByUserProfileIdOrderByCreatedAtAscIdAsc(userProfileId)
                 .stream()
                 .map(CoupleChallengeParticipant::getCoupleChallenge)
                 .filter(challenge -> challenge != null && challenge.getId() != null)
                 .filter(distinctByChallengeId())
+                .filter(challenge -> authorizationService.canAccessChallenge(
+                        participantRepository
+                                .findByCoupleChallengeIdOrderByCreatedAtAscIdAsc(
+                                        challenge.getId())))
                 .toList();
         List<AchievementResponse> achievements = new ArrayList<>();
 

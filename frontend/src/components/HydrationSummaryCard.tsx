@@ -1,3 +1,4 @@
+import type { DailyTargets } from '../types/DailyTargets'
 import type { HydrationSummary } from '../types/WaterTracking'
 import { formatLocalDate } from '../utils/dateFormatting'
 import TrackingIcon from './TrackingIcon'
@@ -10,6 +11,8 @@ import { StatusBadge } from './ui/StatusBadge'
 
 interface HydrationSummaryCardProps {
   summary: HydrationSummary
+  dailyTargets: DailyTargets | null
+  dailyTargetsLoading: boolean
 }
 
 function formatWholeNumber(value: number): string {
@@ -37,7 +40,11 @@ function SupportingMetric({ label, value }: { label: string; value: string }) {
   )
 }
 
-export default function HydrationSummaryCard({ summary }: HydrationSummaryCardProps) {
+export default function HydrationSummaryCard({
+  summary,
+  dailyTargets,
+  dailyTargetsLoading,
+}: HydrationSummaryCardProps) {
   const percentage = summary.progressAgainstCurrentGoalPercentage
   const goalStatus = summary.goalReached === null
     ? <StatusBadge tone="warning">Goal not configured</StatusBadge>
@@ -100,11 +107,32 @@ export default function HydrationSummaryCard({ summary }: HydrationSummaryCardPr
         </div>
 
         <dl className="grid min-w-0 grid-cols-1 gap-3 min-[390px]:grid-cols-2">
-          <SupportingMetric label="Current daily goal" value={formatWaterAmount(summary.currentDailyGoalMl)} />
+          <SupportingMetric
+            label="Configured tracking goal"
+            value={formatWaterAmount(summary.currentDailyGoalMl)}
+          />
+          <SupportingMetric
+            label="Estimated fluid reference"
+            value={dailyTargetsLoading && dailyTargets === null
+              ? 'Loading...'
+              : formatWaterAmount(dailyTargets?.estimatedHydrationMl ?? null)}
+          />
           <SupportingMetric label="Remaining" value={formatWaterAmount(summary.remainingAgainstCurrentGoalMl)} />
           <SupportingMetric label="Excess" value={formatWaterAmount(summary.excessAgainstCurrentGoalMl)} />
           <SupportingMetric label="Entries" value={formatWholeNumber(summary.entryCount)} />
         </dl>
+      </div>
+
+      <div className="mt-4 rounded-control border border-app-border-muted bg-app-surface/80 px-4 py-3">
+        <p className="break-words text-supporting text-app-secondary">
+          The estimated fluid reference is separate from your configured tracking goal and does not replace it.
+        </p>
+        {dailyTargets !== null && !dailyTargets.hydrationEstimateAvailable ? (
+          <p className="mt-2 break-words text-supporting font-medium text-app-primary">
+            {dailyTargets.hydrationEstimateUnavailableReason
+              ?? 'The estimated fluid reference is not available.'}
+          </p>
+        ) : null}
       </div>
     </Card>
   )

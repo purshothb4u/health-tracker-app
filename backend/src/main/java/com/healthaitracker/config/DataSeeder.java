@@ -10,6 +10,7 @@ import com.healthaitracker.entity.CoupleChallengeParticipant;
 import com.healthaitracker.entity.FoodEntry;
 import com.healthaitracker.entity.Gender;
 import com.healthaitracker.entity.HealthMetric;
+import com.healthaitracker.entity.Household;
 import com.healthaitracker.entity.Goal;
 import com.healthaitracker.entity.GoalCheckIn;
 import com.healthaitracker.entity.GoalStatus;
@@ -18,6 +19,7 @@ import com.healthaitracker.entity.MealType;
 import com.healthaitracker.entity.SleepEntry;
 import com.healthaitracker.entity.SleepType;
 import com.healthaitracker.entity.UserProfile;
+import com.healthaitracker.entity.UserAccount;
 import com.healthaitracker.entity.WaterEntry;
 import com.healthaitracker.entity.WaterGoal;
 import com.healthaitracker.repository.ActivityEntryRepository;
@@ -26,12 +28,15 @@ import com.healthaitracker.repository.CoupleChallengeParticipantRepository;
 import com.healthaitracker.repository.CoupleChallengeRepository;
 import com.healthaitracker.repository.FoodEntryRepository;
 import com.healthaitracker.repository.HealthMetricRepository;
+import com.healthaitracker.repository.HouseholdRepository;
 import com.healthaitracker.repository.GoalCheckInRepository;
 import com.healthaitracker.repository.GoalRepository;
 import com.healthaitracker.repository.SleepEntryRepository;
 import com.healthaitracker.repository.UserProfileRepository;
+import com.healthaitracker.repository.UserAccountRepository;
 import com.healthaitracker.repository.WaterEntryRepository;
 import com.healthaitracker.repository.WaterGoalRepository;
+import com.healthaitracker.service.UserAccountService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,6 +49,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Configuration
 public class DataSeeder {
@@ -56,6 +62,10 @@ public class DataSeeder {
     private static final String GOAL_SEED_NOTE_PREFIX = "Development goal seed data:";
     private static final String CHALLENGE_SEED_NOTE_PREFIX =
             "Development couple challenge seed data:";
+    private static final String DEVELOPMENT_HOUSEHOLD_NAME =
+            "HealthAITracker Development Household";
+    private static final String HUSBAND_ACCOUNT_EMAIL = "purush@healthaitracker.test";
+    private static final String WIFE_ACCOUNT_EMAIL = "kasturi@healthaitracker.test";
 
     @Bean
     CommandLineRunner seedUserProfiles(
@@ -71,8 +81,12 @@ public class DataSeeder {
             CoupleChallengeRepository challengeRepository,
             CoupleChallengeParticipantRepository participantRepository,
             ChallengeCheckInRepository challengeCheckInRepository,
+            HouseholdRepository householdRepository,
+            UserAccountRepository userAccountRepository,
+            UserAccountService userAccountService,
             TransactionTemplate transactionTemplate,
-            @Value("${app.seed-data.enabled:true}") boolean seedEnabled) {
+            @Value("${app.seed-data.enabled:false}") boolean seedEnabled,
+            @Value("${app.seed-data.account-password:}") String seedAccountPassword) {
         return args -> {
             if (!seedEnabled) {
                 return;
@@ -90,7 +104,11 @@ public class DataSeeder {
                     goalCheckInRepository,
                     challengeRepository,
                     participantRepository,
-                    challengeCheckInRepository));
+                    challengeCheckInRepository,
+                    householdRepository,
+                    userAccountRepository,
+                    userAccountService,
+                    seedAccountPassword));
         };
     }
 
@@ -106,10 +124,22 @@ public class DataSeeder {
             GoalCheckInRepository goalCheckInRepository,
             CoupleChallengeRepository challengeRepository,
             CoupleChallengeParticipantRepository participantRepository,
-            ChallengeCheckInRepository challengeCheckInRepository) {
+            ChallengeCheckInRepository challengeCheckInRepository,
+            HouseholdRepository householdRepository,
+            UserAccountRepository userAccountRepository,
+            UserAccountService userAccountService,
+            String seedAccountPassword) {
         List<UserProfile> profiles = userProfileRepository.count() == 0
                 ? seedUserProfiles(userProfileRepository)
                 : userProfileRepository.findAll();
+
+        seedAuthenticationFoundation(
+                profiles,
+                userProfileRepository,
+                householdRepository,
+                userAccountRepository,
+                userAccountService,
+                seedAccountPassword);
 
         profiles.stream()
                 .filter(profile -> "Husband".equals(profile.getName()))
@@ -153,6 +183,96 @@ public class DataSeeder {
                 challengeRepository,
                 participantRepository,
                 challengeCheckInRepository);
+    }
+
+    private void seedAuthenticationFoundation(
+            List<UserProfile> profiles,
+            UserProfileRepository userProfileRepository,
+            HouseholdRepository householdRepository,
+            UserAccountRepository userAccountRepository,
+            UserAccountService userAccountService,
+            String seedAccountPassword) {
+        UserProfile husband = findUniqueProfile(profiles, "Husband");
+        UserProfile wife = findUniqueProfile(profiles, "Wife");
+        if (husband == null || wife == null || husband.getId().equals(wife.getId())) {
+            log.warn("Skipping development account seed data because unique Husband and Wife profiles are unavailable.");
+            return;
+        }
+
+        seedDisplayNameIfBlank(husband, "Purush", userProfileRepository);
+        seedDisplayNameIfBlank(wife, "Kasturi", userProfileRepository);
+
+        Optional<UserAccount> husbandAccount = userAccountRepository.findByEmail(HUSBAND_ACCOUNT_EMAIL);
+        Optional<UserAccount> wifeAccount = userAccountRepository.findByEmail(WIFE_ACCOUNT_EMAIL);
+        husbandAccount.ifPresent(account -> validateSeedAccount(account, husband));
+        wifeAccount.ifPresent(account -> validateSeedAccount(account, wife));
+
+        Household household = husbandAccount.map(UserAccount::getHousehold)
+                .or(() -> wifeAccount.map(UserAccount::getHousehold))
+                .orElse(null);
+        if (husbandAccount.isPresent()
+                && wifeAccount.isPresent()
+                && !husbandAccount.get().getHousehold().getId()
+                .equals(wifeAccount.get().getHousehold().getId())) {
+            throw new IllegalStateException(
+                    "Development seed accounts must belong to the same household");
+        }
+
+        boolean accountCreationRequired = husbandAccount.isEmpty() || wifeAccount.isEmpty();
+        if (accountCreationRequired && (seedAccountPassword == null || seedAccountPassword.isBlank())) {
+            log.warn("Development account seeding is enabled, but no account password is configured; "
+                    + "no default credential will be created.");
+            return;
+        }
+
+        if (household == null) {
+            household = new Household();
+            household.setDisplayName(DEVELOPMENT_HOUSEHOLD_NAME);
+            household = householdRepository.save(household);
+        }
+
+        if (husbandAccount.isEmpty()) {
+            userAccountService.createAccount(
+                    HUSBAND_ACCOUNT_EMAIL,
+                    seedAccountPassword,
+                    household.getId(),
+                    husband.getId());
+        }
+        if (wifeAccount.isEmpty()) {
+            userAccountService.createAccount(
+                    WIFE_ACCOUNT_EMAIL,
+                    seedAccountPassword,
+                    household.getId(),
+                    wife.getId());
+        }
+
+        if (accountCreationRequired) {
+            log.info("Seeded development household account ownership relationships.");
+        }
+    }
+
+    private UserProfile findUniqueProfile(List<UserProfile> profiles, String name) {
+        List<UserProfile> matches = profiles.stream()
+                .filter(profile -> name.equals(profile.getName()))
+                .toList();
+        return matches.size() == 1 ? matches.get(0) : null;
+    }
+
+    private void seedDisplayNameIfBlank(
+            UserProfile profile,
+            String displayName,
+            UserProfileRepository userProfileRepository) {
+        if (profile.getDisplayName() == null || profile.getDisplayName().isBlank()) {
+            profile.setDisplayName(displayName);
+            userProfileRepository.save(profile);
+        }
+    }
+
+    private void validateSeedAccount(UserAccount account, UserProfile expectedProfile) {
+        if (!account.getUserProfile().getId().equals(expectedProfile.getId())) {
+            throw new IllegalStateException(
+                    "A development seed account is already linked to an unexpected user profile");
+        }
     }
 
     private void seedGoals(

@@ -5,6 +5,7 @@ import com.healthaitracker.dto.WaterEntryRequest;
 import com.healthaitracker.dto.WaterEntryResponse;
 import com.healthaitracker.dto.WaterGoalRequest;
 import com.healthaitracker.dto.WaterGoalResponse;
+import com.healthaitracker.service.AuthorizationService;
 import com.healthaitracker.service.WaterTrackingService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.PastOrPresent;
@@ -31,20 +32,26 @@ import java.util.List;
 public class WaterTrackingController {
 
     private final WaterTrackingService waterTrackingService;
+    private final AuthorizationService authorizationService;
 
-    public WaterTrackingController(WaterTrackingService waterTrackingService) {
+    public WaterTrackingController(
+            WaterTrackingService waterTrackingService,
+            AuthorizationService authorizationService) {
         this.waterTrackingService = waterTrackingService;
+        this.authorizationService = authorizationService;
     }
 
     @PutMapping("/water-goal")
     public ResponseEntity<WaterGoalResponse> updateWaterGoal(
             @PathVariable Long userId,
             @Valid @RequestBody WaterGoalRequest request) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(waterTrackingService.updateWaterGoal(userId, request));
     }
 
     @GetMapping("/water-goal")
     public ResponseEntity<WaterGoalResponse> getWaterGoal(@PathVariable Long userId) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(waterTrackingService.getWaterGoal(userId));
     }
 
@@ -52,6 +59,7 @@ public class WaterTrackingController {
     public ResponseEntity<WaterEntryResponse> createWaterEntry(
             @PathVariable Long userId,
             @Valid @RequestBody WaterEntryRequest request) {
+        authorizationService.requireSelf(userId);
         WaterEntryResponse created = waterTrackingService.createWaterEntry(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -60,6 +68,7 @@ public class WaterTrackingController {
     public ResponseEntity<List<WaterEntryResponse>> getWaterEntries(
             @PathVariable Long userId,
             @RequestParam("date") @PastOrPresent @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate entryDate) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(waterTrackingService.getWaterEntries(userId, entryDate));
     }
 
@@ -67,6 +76,7 @@ public class WaterTrackingController {
     public ResponseEntity<WaterEntryResponse> getWaterEntry(
             @PathVariable Long userId,
             @PathVariable Long waterEntryId) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(waterTrackingService.getWaterEntry(userId, waterEntryId));
     }
 
@@ -75,6 +85,7 @@ public class WaterTrackingController {
             @PathVariable Long userId,
             @PathVariable Long waterEntryId,
             @Valid @RequestBody WaterEntryRequest request) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(waterTrackingService.updateWaterEntry(userId, waterEntryId, request));
     }
 
@@ -82,6 +93,7 @@ public class WaterTrackingController {
     public ResponseEntity<Void> deleteWaterEntry(
             @PathVariable Long userId,
             @PathVariable Long waterEntryId) {
+        authorizationService.requireSelf(userId);
         waterTrackingService.deleteWaterEntry(userId, waterEntryId);
         return ResponseEntity.noContent().build();
     }
@@ -90,6 +102,7 @@ public class WaterTrackingController {
     public ResponseEntity<HydrationSummary> getHydrationSummary(
             @PathVariable Long userId,
             @RequestParam("date") @PastOrPresent @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate entryDate) {
+        authorizationService.requireSelf(userId);
         return ResponseEntity.ok(waterTrackingService.getHydrationSummary(userId, entryDate));
     }
 }

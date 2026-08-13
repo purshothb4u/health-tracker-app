@@ -31,7 +31,7 @@ export default function HealthMetricsPanel({ profile, onMetricSaved }: HealthMet
         headingId={headingId}
         headingLevel={2}
         title="Weight and health metrics"
-        description={`Record today's weight and review calculated health information for ${profile.name}.`}
+        description={`Record today's weight and review calculated health information for ${profile.displayName}.`}
       />
 
       {initialLoading ? <LoadingState message="Loading health metrics..." /> : null}

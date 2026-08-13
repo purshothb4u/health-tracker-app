@@ -42,8 +42,10 @@ class FoodEntryServiceTest {
         foodEntryService = new FoodEntryService(
                 foodEntryRepository,
                 userProfileRepository,
-                healthMetricRepository,
-                new HealthCalculationService());
+                new DailyTargetCalculationService(
+                        userProfileRepository,
+                        healthMetricRepository,
+                        new HealthCalculationService()));
     }
 
     @Test

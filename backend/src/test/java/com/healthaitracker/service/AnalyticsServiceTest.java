@@ -44,7 +44,11 @@ class AnalyticsServiceTest {
                 userProfileRepository,
                 healthMetricRepository,
                 foodEntryRepository,
-                new HealthCalculationService());
+                new HealthCalculationService(),
+                new DailyTargetCalculationService(
+                        userProfileRepository,
+                        healthMetricRepository,
+                        new HealthCalculationService()));
     }
 
     @Test

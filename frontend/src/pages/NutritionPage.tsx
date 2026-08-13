@@ -6,6 +6,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
 import { StatusBadge, type StatusBadgeTone } from '../components/ui/StatusBadge'
 import { useSelectedProfile } from '../context/SelectedProfileContext'
+import { useDailyTargets } from '../hooks/useDailyTargets'
 
 function profileTone(profileName: string): StatusBadgeTone {
   if (profileName === 'Husband') return 'profile-husband'
@@ -21,6 +22,7 @@ export default function NutritionPage() {
     error,
     reloadProfiles,
   } = useSelectedProfile()
+  const dailyTargets = useDailyTargets(selectedProfile?.id ?? null)
 
   return (
     <div className="min-w-0 space-y-rhythm-lg">
@@ -34,7 +36,7 @@ export default function NutritionPage() {
         </div>
         {selectedProfile ? (
           <StatusBadge tone={profileTone(selectedProfile.name)}>
-            Selected profile: {selectedProfile.name}
+            Selected profile: {selectedProfile.displayName}
           </StatusBadge>
         ) : null}
       </header>
@@ -64,12 +66,40 @@ export default function NutritionPage() {
         />
       ) : null}
 
+      {selectedProfile && dailyTargets.loading && dailyTargets.data === null ? (
+        <LoadingState compact message="Loading estimated daily targets..." />
+      ) : null}
+
+      {selectedProfile && dailyTargets.loading && dailyTargets.data !== null ? (
+        <LoadingState compact message="Refreshing estimated daily targets..." />
+      ) : null}
+
+      {selectedProfile && dailyTargets.error ? (
+        <Alert
+          tone="warning"
+          title="Estimated daily targets unavailable"
+          action={(
+            <Button variant="secondary" size="compact" onClick={dailyTargets.reload}>
+              Retry targets
+            </Button>
+          )}
+        >
+          Food and hydration tracking remain available. {dailyTargets.error}
+        </Alert>
+      ) : null}
+
       {!error && selectedProfile ? (
         <div key={selectedProfile.id} className="min-w-0 space-y-12">
-          <FoodTrackingPanel profile={selectedProfile} />
+          <FoodTrackingPanel
+            dailyTargets={dailyTargets.data}
+            dailyTargetsLoading={dailyTargets.loading}
+            profile={selectedProfile}
+          />
           <div className="min-w-0 border-t border-app-border-muted pt-10">
             <WaterTrackingPanel
-              profileName={selectedProfile.name}
+              dailyTargets={dailyTargets.data}
+              dailyTargetsLoading={dailyTargets.loading}
+              profileName={selectedProfile.displayName}
               userProfileId={selectedProfile.id}
             />
           </div>

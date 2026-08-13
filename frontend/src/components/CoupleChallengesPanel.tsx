@@ -16,10 +16,6 @@ import { LoadingState } from './ui/LoadingState'
 import { SectionHeader } from './ui/SectionHeader'
 import { StatusBadge } from './ui/StatusBadge'
 
-interface CoupleChallengesPanelProps {
-  participantUserProfileIds: readonly number[]
-}
-
 const filters: Array<{ value: ChallengeStatus | null; label: string }> = [
   { value: null, label: 'All' },
   ...Object.entries(CHALLENGE_STATUS_LABELS).map(([value, label]) => ({
@@ -32,14 +28,17 @@ function messageFrom(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
 }
 
-export default function CoupleChallengesPanel({ participantUserProfileIds }: CoupleChallengesPanelProps) {
-  const challengeState = useCoupleChallenges(participantUserProfileIds)
+export default function CoupleChallengesPanel() {
+  const challengeState = useCoupleChallenges()
   const [showForm, setShowForm] = useState(false)
   const [editingChallenge, setEditingChallenge] = useState<CoupleChallenge | null>(null)
   const [pendingDeleteChallenge, setPendingDeleteChallenge] = useState<Pick<CoupleChallenge, 'id' | 'title'> | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
+  const participantUserProfileIds = challengeState.eligibleParticipants.map(
+    (participant) => participant.profileId,
+  )
   const canCreate = participantUserProfileIds.length === 2
     && participantUserProfileIds[0] !== participantUserProfileIds[1]
 

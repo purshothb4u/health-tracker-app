@@ -2,6 +2,8 @@ package com.healthaitracker.service;
 
 import com.healthaitracker.dto.HealthMetricRequest;
 import com.healthaitracker.dto.HealthMetricResponse;
+import com.healthaitracker.dto.HealthSummary;
+import com.healthaitracker.entity.ActivityLevel;
 import com.healthaitracker.entity.Gender;
 import com.healthaitracker.entity.HealthMetric;
 import com.healthaitracker.entity.UserProfile;
@@ -42,7 +44,11 @@ class HealthMetricServiceTest {
         healthMetricService = new HealthMetricService(
                 healthMetricRepository,
                 userProfileRepository,
-                new HealthCalculationService());
+                new HealthCalculationService(),
+                new DailyTargetCalculationService(
+                        userProfileRepository,
+                        healthMetricRepository,
+                        new HealthCalculationService()));
     }
 
     @Test
@@ -86,6 +92,22 @@ class HealthMetricServiceTest {
                 1L, new HealthMetricRequest(metricDate, new BigDecimal("84.00"), null)))
                 .isInstanceOf(HealthMetricAlreadyExistsException.class)
                 .hasMessageContaining(metricDate.toString());
+    }
+
+    @Test
+    void healthSummaryUsesCentralActivityAdjustedMaintenanceEstimate() {
+        UserProfile profile = createProfile(1L);
+        profile.setActivityLevel(ActivityLevel.VERY_ACTIVE);
+        HealthMetric latestMetric = createMetric(profile, 10L, LocalDate.now(), "80.00");
+        when(userProfileRepository.findById(1L)).thenReturn(Optional.of(profile));
+        when(healthMetricRepository.findFirstByUserProfileIdOrderByMetricDateDesc(1L))
+                .thenReturn(Optional.of(latestMetric));
+
+        HealthSummary summary = healthMetricService.getHealthSummary(1L);
+
+        assertThat(summary.latestWeightKg()).isEqualByComparingTo("80.00");
+        assertThat(summary.bmrCaloriesPerDay()).isEqualByComparingTo("1749");
+        assertThat(summary.maintenanceCaloriesPerDay()).isEqualByComparingTo("3017");
     }
 
     private UserProfile createProfile(Long id) {

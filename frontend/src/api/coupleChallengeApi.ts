@@ -7,10 +7,15 @@ import type {
   CoupleChallenge,
   CoupleChallengeProgress,
   CoupleChallengeRequest,
+  EligibleCoupleParticipant,
   ProgressCheckInRequest,
 } from '../types/CoupleChallenge'
 
 const CHALLENGES_PATH = '/api/couple-challenges'
+
+export function fetchEligibleCoupleParticipants(): Promise<EligibleCoupleParticipant[]> {
+  return get<EligibleCoupleParticipant[]>(`${CHALLENGES_PATH}/eligible-participants`)
+}
 
 export function createCoupleChallenge(data: CoupleChallengeRequest): Promise<CoupleChallenge> {
   return post<CoupleChallenge>(CHALLENGES_PATH, data)

@@ -4,6 +4,7 @@ import FoodEntryHistory from './FoodEntryHistory'
 import DailyNutritionSummaryCard from './DailyNutritionSummaryCard'
 import { useFoodEntries } from '../hooks/useFoodEntries'
 import type { FoodEntry, FoodEntryRequest } from '../types/FoodEntry'
+import type { DailyTargets } from '../types/DailyTargets'
 import type { UserProfile } from '../types/UserProfile'
 import { formatLocalDate } from '../utils/dateFormatting'
 import TrackingIcon from './TrackingIcon'
@@ -17,6 +18,8 @@ import { SectionHeader } from './ui/SectionHeader'
 
 interface FoodTrackingPanelProps {
   profile: UserProfile
+  dailyTargets: DailyTargets | null
+  dailyTargetsLoading: boolean
 }
 
 function getTodayDate(): string {
@@ -31,7 +34,11 @@ function getErrorMessage(error: unknown, fallbackMessage: string): string {
   return error instanceof Error ? error.message : fallbackMessage
 }
 
-export default function FoodTrackingPanel({ profile }: FoodTrackingPanelProps) {
+export default function FoodTrackingPanel({
+  profile,
+  dailyTargets,
+  dailyTargetsLoading,
+}: FoodTrackingPanelProps) {
   const {
     entries,
     summary,
@@ -119,7 +126,7 @@ export default function FoodTrackingPanel({ profile }: FoodTrackingPanelProps) {
             <span className="break-words">Food and nutrition</span>
           </span>
         )}
-        description={`Review ${profile.name}'s totals and food history for ${formatLocalDate(selectedDate)}.`}
+        description={`Review ${profile.displayName}'s totals and food history for ${formatLocalDate(selectedDate)}.`}
         actions={(
           <Field label="Food date" className="w-full sm:w-auto">
             {(controlProps) => (
@@ -167,7 +174,14 @@ export default function FoodTrackingPanel({ profile }: FoodTrackingPanelProps) {
 
       {hasLoadedData && (
         <>
-          {summary && <DailyNutritionSummaryCard entryCount={entries.length} summary={summary} />}
+          {summary && (
+            <DailyNutritionSummaryCard
+              dailyTargets={dailyTargets}
+              dailyTargetsLoading={dailyTargetsLoading}
+              entryCount={entries.length}
+              summary={summary}
+            />
+          )}
           <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)] xl:items-start">
             <FoodEntryForm
               editingEntry={editingEntry}

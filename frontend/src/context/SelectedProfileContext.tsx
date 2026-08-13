@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useSearchParams } from 'react-router'
+import { useAuth } from './AuthContext'
 import { useUserProfiles } from '../hooks/useUserProfiles'
 import type { UserProfile } from '../types/UserProfile'
 
@@ -14,7 +15,6 @@ interface SelectedProfileContextValue {
   profiles: UserProfile[]
   selectedProfile: UserProfile | null
   selectedProfileId: number | null
-  participantUserProfileIds: readonly number[]
   loading: boolean
   error: string | null
   reloadProfiles: () => void
@@ -43,6 +43,7 @@ function parseProfileId(value: string | null): number | null {
 }
 
 export function SelectedProfileProvider({ children }: SelectedProfileProviderProps) {
+  const { identity } = useAuth()
   const { profiles: loadedProfiles, loading, error, reload } = useUserProfiles()
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedProfileId = parseProfileId(searchParams.get('profile'))
@@ -55,26 +56,19 @@ export function SelectedProfileProvider({ children }: SelectedProfileProviderPro
     [loadedProfiles],
   )
 
-  const defaultProfile = useMemo(
-    () => profiles.find((profile) => profile.name === 'Husband') ?? profiles[0] ?? null,
-    [profiles],
+  const selectedProfileId = identity?.profileId ?? null
+  const selectedProfile = useMemo(
+    () => profiles.find((profile) => profile.id === selectedProfileId) ?? null,
+    [profiles, selectedProfileId],
   )
-
-  const requestedProfile = useMemo(
-    () => profiles.find((profile) => profile.id === requestedProfileId) ?? null,
-    [profiles, requestedProfileId],
-  )
-
-  const selectedProfile = requestedProfile ?? defaultProfile
-  const selectedProfileId = selectedProfile?.id ?? null
-
-  const participantUserProfileIds = useMemo(
-    () => profiles.slice(0, 2).map((profile) => profile.id),
-    [profiles],
-  )
+  const identityError = !loading && error === null && selectedProfileId !== null
+    && selectedProfile === null
+    ? 'The authenticated profile is not available.'
+    : null
+  const resolvedError = error ?? identityError
 
   useEffect(() => {
-    if (loading || error !== null || selectedProfileId === null) {
+    if (selectedProfileId === null) {
       return
     }
 
@@ -85,35 +79,29 @@ export function SelectedProfileProvider({ children }: SelectedProfileProviderPro
     const correctedParams = new URLSearchParams(searchParams)
     correctedParams.set('profile', String(selectedProfileId))
     setSearchParams(correctedParams, { replace: true })
-  }, [error, loading, requestedProfileId, searchParams, selectedProfileId, setSearchParams])
+  }, [requestedProfileId, searchParams, selectedProfileId, setSearchParams])
 
   const selectProfile = useCallback((profileId: number) => {
-    if (loading || !profiles.some((profile) => profile.id === profileId)) {
-      return
-    }
-
-    if (profileId === selectedProfileId) {
+    if (profileId !== selectedProfileId || requestedProfileId === selectedProfileId) {
       return
     }
 
     const nextParams = new URLSearchParams(searchParams)
     nextParams.set('profile', String(profileId))
     setSearchParams(nextParams)
-  }, [loading, profiles, searchParams, selectedProfileId, setSearchParams])
+  }, [requestedProfileId, searchParams, selectedProfileId, setSearchParams])
 
   const value = useMemo<SelectedProfileContextValue>(() => ({
     profiles,
     selectedProfile,
     selectedProfileId,
-    participantUserProfileIds,
     loading,
-    error,
+    error: resolvedError,
     reloadProfiles: reload,
     selectProfile,
   }), [
-    error,
+    resolvedError,
     loading,
-    participantUserProfileIds,
     profiles,
     reload,
     selectProfile,

@@ -34,7 +34,7 @@ export default function ActivityPage() {
         </div>
         {selectedProfile ? (
           <StatusBadge tone={profileTone(selectedProfile.name)}>
-            Selected profile: {selectedProfile.name}
+            Selected profile: {selectedProfile.displayName}
           </StatusBadge>
         ) : null}
       </header>
@@ -67,12 +67,12 @@ export default function ActivityPage() {
       {!error && selectedProfile ? (
         <div key={selectedProfile.id} className="min-w-0 space-y-12">
           <ActivityTrackingPanel
-            profileName={selectedProfile.name}
+            profileName={selectedProfile.displayName}
             userProfileId={selectedProfile.id}
           />
           <div className="min-w-0 border-t border-app-border-muted pt-10">
             <SleepTrackingPanel
-              profileName={selectedProfile.name}
+              profileName={selectedProfile.displayName}
               userProfileId={selectedProfile.id}
             />
           </div>

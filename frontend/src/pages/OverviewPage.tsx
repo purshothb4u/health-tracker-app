@@ -9,7 +9,9 @@ import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
 import { useSelectedProfile } from '../context/SelectedProfileContext'
+import { useAuth } from '../context/AuthContext'
 import { useOverviewData } from '../hooks/useOverviewData'
+import { useDailyTargets } from '../hooks/useDailyTargets'
 
 const localDateFormatter = new Intl.DateTimeFormat('en-GB', {
   weekday: 'long',
@@ -38,6 +40,7 @@ function localDateFromIsoDate(value: string): Date {
 }
 
 export default function OverviewPage() {
+  const { identity } = useAuth()
   const {
     profiles,
     selectedProfile,
@@ -46,7 +49,13 @@ export default function OverviewPage() {
     reloadProfiles,
   } = useSelectedProfile()
   const overview = useOverviewData(selectedProfile?.id ?? null)
+  const dailyTargets = useDailyTargets(selectedProfile?.id ?? null)
   const now = new Date()
+
+  function reloadOverview() {
+    overview.reload()
+    dailyTargets.reload()
+  }
 
   const refreshStatus = overview.lastRefreshedAt !== null
     ? `Last refreshed ${refreshedFormatter.format(new Date(overview.lastRefreshedAt))}.`
@@ -61,7 +70,7 @@ export default function OverviewPage() {
           <p className="text-label uppercase tracking-[0.14em] text-primary-700">My health</p>
           <h1 className="mt-2 break-words text-page-title text-app-primary">
             {selectedProfile
-              ? `${greetingFor(now)}, ${selectedProfile.name}`
+              ? `${greetingFor(now)}, ${identity?.displayName ?? selectedProfile.displayName}`
               : `${greetingFor(now)}`}
           </h1>
           <p className="mt-2 max-w-2xl break-words text-supporting text-app-secondary">
@@ -79,7 +88,7 @@ export default function OverviewPage() {
             </div>
             <Button
               variant="quiet"
-              onClick={overview.reload}
+              onClick={reloadOverview}
               disabled={overview.initialLoading || overview.refreshing}
               aria-label={overview.initialLoading
                 ? 'Loading overview'
@@ -139,6 +148,7 @@ export default function OverviewPage() {
             nutrition={overview.nutrition}
             hydration={overview.hydration}
             activity={overview.activity}
+            dailyTargets={dailyTargets}
             sleep={overview.sleep}
           />
           <OverviewGoalPreview state={overview.goals} />
