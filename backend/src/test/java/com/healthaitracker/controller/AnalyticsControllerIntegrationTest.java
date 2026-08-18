@@ -3,17 +3,23 @@ package com.healthaitracker.controller;
 import com.healthaitracker.entity.FoodEntry;
 import com.healthaitracker.entity.Gender;
 import com.healthaitracker.entity.HealthMetric;
+import com.healthaitracker.entity.Household;
 import com.healthaitracker.entity.MealType;
+import com.healthaitracker.entity.UserAccount;
 import com.healthaitracker.entity.UserProfile;
 import com.healthaitracker.repository.FoodEntryRepository;
 import com.healthaitracker.repository.HealthMetricRepository;
+import com.healthaitracker.repository.HouseholdRepository;
+import com.healthaitracker.repository.UserAccountRepository;
 import com.healthaitracker.repository.UserProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -38,6 +44,18 @@ class AnalyticsControllerIntegrationTest {
     @Autowired
     private UserProfileRepository userProfileRepository;
 
+    @Autowired
+    private UserAccountRepository userAccountRepository;
+
+    @Autowired
+    private HouseholdRepository householdRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private WebApplicationContext applicationContext;
+
     private Long husbandId;
     private Long wifeId;
 
@@ -45,10 +63,23 @@ class AnalyticsControllerIntegrationTest {
     void setUp() {
         foodEntryRepository.deleteAll();
         healthMetricRepository.deleteAll();
+        userAccountRepository.deleteAll();
+        householdRepository.deleteAll();
         userProfileRepository.deleteAll();
 
-        husbandId = userProfileRepository.save(createProfile("Husband", Gender.MALE, 85.0)).getId();
+        UserProfile husband = userProfileRepository.save(createProfile("Husband", Gender.MALE, 85.0));
+        husbandId = husband.getId();
         wifeId = userProfileRepository.save(createProfile("Wife", Gender.FEMALE, 70.0)).getId();
+        Household household = ControllerTestAuthentication.createHousehold(
+                householdRepository,
+                "Analytics test household");
+        UserAccount account = ControllerTestAuthentication.createAccount(
+                userAccountRepository,
+                passwordEncoder,
+                household,
+                husband,
+                "analytics.controller@example.com");
+        mockMvc = ControllerTestAuthentication.authenticatedMockMvc(applicationContext, account);
     }
 
     @Test
@@ -119,13 +150,13 @@ class AnalyticsControllerIntegrationTest {
     }
 
     @Test
-    void returnsNotFoundForMissingProfile() throws Exception {
+    void returnsForbiddenForAProfileOutsideTheAuthenticatedAccount() throws Exception {
         LocalDate today = LocalDate.now();
 
         mockMvc.perform(get("/api/users/{userId}/analytics", 999999L)
                         .param("from", today.toString())
                         .param("to", today.toString()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
     private UserProfile createProfile(String name, Gender gender, double currentWeightKg) {

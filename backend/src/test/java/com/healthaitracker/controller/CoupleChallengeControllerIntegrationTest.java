@@ -3,19 +3,33 @@ package com.healthaitracker.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.healthaitracker.entity.Gender;
+import com.healthaitracker.entity.Household;
+import com.healthaitracker.entity.UserAccount;
 import com.healthaitracker.entity.UserProfile;
 import com.healthaitracker.repository.ChallengeCheckInRepository;
+import com.healthaitracker.repository.ActivityEntryRepository;
 import com.healthaitracker.repository.CoupleChallengeParticipantRepository;
 import com.healthaitracker.repository.CoupleChallengeRepository;
+import com.healthaitracker.repository.FoodEntryRepository;
+import com.healthaitracker.repository.GoalCheckInRepository;
+import com.healthaitracker.repository.GoalRepository;
+import com.healthaitracker.repository.HealthMetricRepository;
+import com.healthaitracker.repository.HouseholdRepository;
+import com.healthaitracker.repository.SleepEntryRepository;
+import com.healthaitracker.repository.UserAccountRepository;
 import com.healthaitracker.repository.UserProfileRepository;
+import com.healthaitracker.repository.WaterEntryRepository;
+import com.healthaitracker.repository.WaterGoalRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
@@ -47,10 +61,35 @@ class CoupleChallengeControllerIntegrationTest {
     @Autowired
     private CoupleChallengeRepository challengeRepository;
     @Autowired
+    private GoalCheckInRepository goalCheckInRepository;
+    @Autowired
+    private GoalRepository goalRepository;
+    @Autowired
+    private ActivityEntryRepository activityEntryRepository;
+    @Autowired
+    private SleepEntryRepository sleepEntryRepository;
+    @Autowired
+    private WaterEntryRepository waterEntryRepository;
+    @Autowired
+    private WaterGoalRepository waterGoalRepository;
+    @Autowired
+    private FoodEntryRepository foodEntryRepository;
+    @Autowired
+    private HealthMetricRepository healthMetricRepository;
+    @Autowired
     private UserProfileRepository userProfileRepository;
+    @Autowired
+    private UserAccountRepository userAccountRepository;
+    @Autowired
+    private HouseholdRepository householdRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private WebApplicationContext applicationContext;
 
     private Long husbandId;
     private Long wifeId;
+    private MockMvc wifeMockMvc;
     private LocalDate today;
 
     @BeforeEach
@@ -58,9 +97,38 @@ class CoupleChallengeControllerIntegrationTest {
         checkInRepository.deleteAll();
         participantRepository.deleteAll();
         challengeRepository.deleteAll();
+        goalCheckInRepository.deleteAll();
+        goalRepository.deleteAll();
+        activityEntryRepository.deleteAll();
+        sleepEntryRepository.deleteAll();
+        waterEntryRepository.deleteAll();
+        waterGoalRepository.deleteAll();
+        foodEntryRepository.deleteAll();
+        healthMetricRepository.deleteAll();
+        userAccountRepository.deleteAll();
+        householdRepository.deleteAll();
         userProfileRepository.deleteAll();
-        husbandId = userProfileRepository.save(profile("Husband", Gender.MALE)).getId();
-        wifeId = userProfileRepository.save(profile("Wife", Gender.FEMALE)).getId();
+        UserProfile husband = userProfileRepository.save(profile("Husband", Gender.MALE));
+        UserProfile wife = userProfileRepository.save(profile("Wife", Gender.FEMALE));
+        husbandId = husband.getId();
+        wifeId = wife.getId();
+        Household household = ControllerTestAuthentication.createHousehold(
+                householdRepository,
+                "Couple challenge test household");
+        UserAccount husbandAccount = ControllerTestAuthentication.createAccount(
+                userAccountRepository,
+                passwordEncoder,
+                household,
+                husband,
+                "challenge.husband.controller@example.com");
+        UserAccount wifeAccount = ControllerTestAuthentication.createAccount(
+                userAccountRepository,
+                passwordEncoder,
+                household,
+                wife,
+                "challenge.wife.controller@example.com");
+        mockMvc = ControllerTestAuthentication.authenticatedMockMvc(applicationContext, husbandAccount);
+        wifeMockMvc = ControllerTestAuthentication.authenticatedMockMvc(applicationContext, wifeAccount);
         today = LocalDate.now();
     }
 
@@ -208,7 +276,7 @@ class CoupleChallengeControllerIntegrationTest {
                 .andExpect(jsonPath("$.tie").value(true))
                 .andExpect(jsonPath("$.bothCompleted").value(true));
 
-        mockMvc.perform(get("/api/users/{userId}/couple-achievements", wifeId))
+        wifeMockMvc.perform(get("/api/users/{userId}/couple-achievements", wifeId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].achievementType")

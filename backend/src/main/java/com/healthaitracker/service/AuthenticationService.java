@@ -6,7 +6,7 @@ import com.healthaitracker.entity.UserAccount;
 import com.healthaitracker.entity.UserProfile;
 import com.healthaitracker.exception.AuthenticationFailedException;
 import com.healthaitracker.exception.ResourceNotFoundException;
-import com.healthaitracker.repository.UserProfileRepository;
+import com.healthaitracker.repository.UserAccountRepository;
 import com.healthaitracker.security.AuthenticatedAccountPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -28,19 +28,19 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
     private final SecurityContextRepository securityContextRepository;
-    private final UserProfileRepository userProfileRepository;
+    private final UserAccountRepository userAccountRepository;
     private final ProfileCompletenessService profileCompletenessService;
 
     public AuthenticationService(
             AuthenticationManager authenticationManager,
             SessionAuthenticationStrategy sessionAuthenticationStrategy,
             SecurityContextRepository securityContextRepository,
-            UserProfileRepository userProfileRepository,
+            UserAccountRepository userAccountRepository,
             ProfileCompletenessService profileCompletenessService) {
         this.authenticationManager = authenticationManager;
         this.sessionAuthenticationStrategy = sessionAuthenticationStrategy;
         this.securityContextRepository = securityContextRepository;
-        this.userProfileRepository = userProfileRepository;
+        this.userAccountRepository = userAccountRepository;
         this.profileCompletenessService = profileCompletenessService;
     }
 
@@ -96,11 +96,12 @@ public class AuthenticationService {
         if (!(authentication.getPrincipal() instanceof AuthenticatedAccountPrincipal principal)) {
             throw new IllegalStateException("Authenticated account identity is unavailable");
         }
-        UserProfile profile = userProfileRepository.findById(principal.getProfileId())
-                .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
-        return AuthenticatedIdentityResponse.fromPrincipalAndProfile(
-                principal,
-                profile,
+        UserAccount account = userAccountRepository
+                .findWithHouseholdAndProfileById(principal.getAccountId())
+                .orElseThrow(() -> new ResourceNotFoundException("Authenticated account not found"));
+        UserProfile profile = account.getUserProfile();
+        return AuthenticatedIdentityResponse.fromAccount(
+                account,
                 profileCompletenessService.isComplete(profile));
     }
 }

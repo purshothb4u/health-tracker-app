@@ -60,8 +60,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ErrorResponse.of(ex.getMessage()));
     }
 
+    @ExceptionHandler(PartnerInvitationUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handlePartnerInvitationUnavailable(
+            PartnerInvitationUnavailableException ex) {
+        return ResponseEntity.badRequest().body(ErrorResponse.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(PartnerLinkingConflictException.class)
+    public ResponseEntity<ErrorResponse> handlePartnerLinkingConflict(
+            PartnerLinkingConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(ex.getMessage()));
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        if (isConstraintViolation(ex, "uk_partner_invitations_invite_code_hash")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ErrorResponse.of("Partner linking is unavailable for this account"));
+        }
         if (isWaterGoalConstraintViolation(ex)) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(ErrorResponse.of("A water goal already exists for this user profile"));
@@ -71,10 +87,17 @@ public class GlobalExceptionHandler {
     }
 
     private boolean isWaterGoalConstraintViolation(DataIntegrityViolationException ex) {
+        return isConstraintViolation(ex, "uk_water_goals_user_profile");
+    }
+
+    private boolean isConstraintViolation(
+            DataIntegrityViolationException ex,
+            String constraintName) {
         Throwable cause = ex;
         while (cause != null) {
             String message = cause.getMessage();
-            if (message != null && message.toLowerCase(Locale.ROOT).contains("uk_water_goals_user_profile")) {
+            if (message != null
+                    && message.toLowerCase(Locale.ROOT).contains(constraintName)) {
                 return true;
             }
             cause = cause.getCause();

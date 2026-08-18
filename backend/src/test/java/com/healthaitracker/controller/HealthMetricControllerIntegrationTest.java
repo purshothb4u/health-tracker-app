@@ -2,9 +2,13 @@ package com.healthaitracker.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.healthaitracker.entity.Gender;
+import com.healthaitracker.entity.Household;
+import com.healthaitracker.entity.UserAccount;
 import com.healthaitracker.entity.UserProfile;
 import com.healthaitracker.repository.FoodEntryRepository;
 import com.healthaitracker.repository.HealthMetricRepository;
+import com.healthaitracker.repository.HouseholdRepository;
+import com.healthaitracker.repository.UserAccountRepository;
 import com.healthaitracker.repository.UserProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,7 +16,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.time.LocalDate;
 import java.util.Map;
@@ -42,12 +48,26 @@ class HealthMetricControllerIntegrationTest {
     @Autowired
     private UserProfileRepository userProfileRepository;
 
+    @Autowired
+    private UserAccountRepository userAccountRepository;
+
+    @Autowired
+    private HouseholdRepository householdRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private WebApplicationContext applicationContext;
+
     private Long userProfileId;
 
     @BeforeEach
     void setUp() {
         foodEntryRepository.deleteAll();
         healthMetricRepository.deleteAll();
+        userAccountRepository.deleteAll();
+        householdRepository.deleteAll();
         userProfileRepository.deleteAll();
 
         UserProfile profile = new UserProfile();
@@ -58,7 +78,18 @@ class HealthMetricControllerIntegrationTest {
         profile.setStartingWeightKg(87.0);
         profile.setCurrentWeightKg(87.0);
         profile.setTargetWeightKg(75.0);
-        userProfileId = userProfileRepository.save(profile).getId();
+        UserProfile savedProfile = userProfileRepository.save(profile);
+        userProfileId = savedProfile.getId();
+        Household household = ControllerTestAuthentication.createHousehold(
+                householdRepository,
+                "Health metric test household");
+        UserAccount account = ControllerTestAuthentication.createAccount(
+                userAccountRepository,
+                passwordEncoder,
+                household,
+                savedProfile,
+                "health.metric.controller@example.com");
+        mockMvc = ControllerTestAuthentication.authenticatedMockMvc(applicationContext, account);
     }
 
     @Test

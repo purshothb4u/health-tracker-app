@@ -1,7 +1,7 @@
 package com.healthaitracker.dto;
 
+import com.healthaitracker.entity.UserAccount;
 import com.healthaitracker.entity.UserProfile;
-import com.healthaitracker.security.AuthenticatedAccountPrincipal;
 
 public record AuthenticatedIdentityResponse(
         String email,
@@ -11,15 +11,15 @@ public record AuthenticatedIdentityResponse(
         boolean profileComplete
 ) {
 
-    public static AuthenticatedIdentityResponse fromPrincipalAndProfile(
-            AuthenticatedAccountPrincipal principal,
-            UserProfile profile,
+    public static AuthenticatedIdentityResponse fromAccount(
+            UserAccount account,
             boolean profileComplete) {
+        UserProfile profile = account.getUserProfile();
         return new AuthenticatedIdentityResponse(
-                principal.getEmail(),
-                principal.getProfileId(),
+                account.getEmail(),
+                profile.getId(),
                 profile.getDisplayName(),
-                principal.getHouseholdId(),
+                account.getHousehold().getId(),
                 profileComplete);
     }
 }

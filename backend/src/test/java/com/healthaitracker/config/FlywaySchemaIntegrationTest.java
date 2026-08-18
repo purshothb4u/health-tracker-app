@@ -3,10 +3,12 @@ package com.healthaitracker.config;
 import com.healthaitracker.entity.ActivityLevel;
 import com.healthaitracker.entity.Gender;
 import com.healthaitracker.entity.Household;
+import com.healthaitracker.entity.PartnerInvitation;
 import com.healthaitracker.entity.ProfileGoalType;
 import com.healthaitracker.entity.UserAccount;
 import com.healthaitracker.entity.UserProfile;
 import com.healthaitracker.repository.HouseholdRepository;
+import com.healthaitracker.repository.PartnerInvitationRepository;
 import com.healthaitracker.repository.UserAccountRepository;
 import com.healthaitracker.repository.UserProfileRepository;
 import com.healthaitracker.service.ProfileCompletenessService;
@@ -50,6 +52,9 @@ class FlywaySchemaIntegrationTest {
     private UserAccountRepository userAccountRepository;
 
     @Autowired
+    private PartnerInvitationRepository partnerInvitationRepository;
+
+    @Autowired
     private ProfileCompletenessService profileCompletenessService;
 
     @Test
@@ -62,9 +67,14 @@ class FlywaySchemaIntegrationTest {
                 .filter(migration -> "2".equals(migration.getVersion().getVersion()))
                 .findFirst()
                 .orElseThrow();
+        MigrationInfo versionThree = Arrays.stream(flyway.info().applied())
+                .filter(migration -> "3".equals(migration.getVersion().getVersion()))
+                .findFirst()
+                .orElseThrow();
 
         assertEquals(MigrationState.SUCCESS, versionOne.getState());
         assertEquals(MigrationState.SUCCESS, versionTwo.getState());
+        assertEquals(MigrationState.SUCCESS, versionThree.getState());
         assertEquals(
                 1,
                 jdbcTemplate.queryForObject(
@@ -77,6 +87,7 @@ class FlywaySchemaIntegrationTest {
         assertNotNull(householdRepository);
         assertNotNull(userProfileRepository);
         assertNotNull(userAccountRepository);
+        assertNotNull(partnerInvitationRepository);
 
         Household household = householdRepository.saveAndFlush(household("Migration household"));
         UserProfile firstProfile = userProfileRepository.saveAndFlush(profile("First profile"));
@@ -138,6 +149,16 @@ class FlywaySchemaIntegrationTest {
                         Long.MAX_VALUE));
 
         assertTrue(userAccountRepository.findByEmail("first@example.com").isPresent());
+
+        PartnerInvitation invitation = new PartnerInvitation();
+        invitation.setHousehold(household);
+        invitation.setInviterAccount(firstAccount);
+        invitation.setInviteCodeHash("a".repeat(64));
+        invitation.setCreatedAt(java.time.LocalDateTime.now());
+        invitation.setExpiresAt(java.time.LocalDateTime.now().plusDays(7));
+        invitation = partnerInvitationRepository.saveAndFlush(invitation);
+        assertNotNull(invitation.getId());
+        assertEquals(64, invitation.getInviteCodeHash().length());
     }
 
     private Household household(String displayName) {

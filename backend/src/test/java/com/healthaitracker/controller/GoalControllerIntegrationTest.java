@@ -3,6 +3,8 @@ package com.healthaitracker.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.healthaitracker.entity.Gender;
+import com.healthaitracker.entity.Household;
+import com.healthaitracker.entity.UserAccount;
 import com.healthaitracker.entity.UserProfile;
 import com.healthaitracker.repository.ActivityEntryRepository;
 import com.healthaitracker.repository.ChallengeCheckInRepository;
@@ -12,7 +14,9 @@ import com.healthaitracker.repository.FoodEntryRepository;
 import com.healthaitracker.repository.GoalCheckInRepository;
 import com.healthaitracker.repository.GoalRepository;
 import com.healthaitracker.repository.HealthMetricRepository;
+import com.healthaitracker.repository.HouseholdRepository;
 import com.healthaitracker.repository.SleepEntryRepository;
+import com.healthaitracker.repository.UserAccountRepository;
 import com.healthaitracker.repository.UserProfileRepository;
 import com.healthaitracker.repository.WaterEntryRepository;
 import com.healthaitracker.repository.WaterGoalRepository;
@@ -22,8 +26,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
@@ -71,6 +77,14 @@ class GoalControllerIntegrationTest {
     private HealthMetricRepository healthMetricRepository;
     @Autowired
     private UserProfileRepository userProfileRepository;
+    @Autowired
+    private UserAccountRepository userAccountRepository;
+    @Autowired
+    private HouseholdRepository householdRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private WebApplicationContext applicationContext;
 
     private Long husbandId;
     private Long wifeId;
@@ -89,9 +103,22 @@ class GoalControllerIntegrationTest {
         waterGoalRepository.deleteAll();
         foodEntryRepository.deleteAll();
         healthMetricRepository.deleteAll();
+        userAccountRepository.deleteAll();
+        householdRepository.deleteAll();
         userProfileRepository.deleteAll();
-        husbandId = userProfileRepository.save(profile("Husband", Gender.MALE)).getId();
+        UserProfile husband = userProfileRepository.save(profile("Husband", Gender.MALE));
+        husbandId = husband.getId();
         wifeId = userProfileRepository.save(profile("Wife", Gender.FEMALE)).getId();
+        Household household = ControllerTestAuthentication.createHousehold(
+                householdRepository,
+                "Goal controller test household");
+        UserAccount account = ControllerTestAuthentication.createAccount(
+                userAccountRepository,
+                passwordEncoder,
+                household,
+                husband,
+                "goal.controller@example.com");
+        mockMvc = ControllerTestAuthentication.authenticatedMockMvc(applicationContext, account);
         today = LocalDate.now();
     }
 
@@ -205,10 +232,10 @@ class GoalControllerIntegrationTest {
                 goalRequest("Private", "ACTIVITY_MINUTES", 100L, null, null));
 
         mockMvc.perform(get("/api/users/{userId}/goals/{goalId}", wifeId, goalId))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Goal not found with id: " + goalId));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Access denied"));
         mockMvc.perform(get("/api/users/{userId}/goals/{goalId}/progress", wifeId, goalId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
     @Test

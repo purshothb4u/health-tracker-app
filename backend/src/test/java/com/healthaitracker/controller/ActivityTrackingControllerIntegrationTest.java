@@ -3,10 +3,14 @@ package com.healthaitracker.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.healthaitracker.entity.Gender;
+import com.healthaitracker.entity.Household;
+import com.healthaitracker.entity.UserAccount;
 import com.healthaitracker.entity.UserProfile;
 import com.healthaitracker.repository.ActivityEntryRepository;
 import com.healthaitracker.repository.FoodEntryRepository;
 import com.healthaitracker.repository.HealthMetricRepository;
+import com.healthaitracker.repository.HouseholdRepository;
+import com.healthaitracker.repository.UserAccountRepository;
 import com.healthaitracker.repository.UserProfileRepository;
 import com.healthaitracker.repository.WaterEntryRepository;
 import com.healthaitracker.repository.WaterGoalRepository;
@@ -17,8 +21,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -69,8 +75,21 @@ class ActivityTrackingControllerIntegrationTest {
     @Autowired
     private UserProfileRepository userProfileRepository;
 
+    @Autowired
+    private UserAccountRepository userAccountRepository;
+
+    @Autowired
+    private HouseholdRepository householdRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private WebApplicationContext applicationContext;
+
     private Long husbandId;
     private Long wifeId;
+    private MockMvc wifeMockMvc;
 
     @BeforeEach
     void setUp() {
@@ -79,10 +98,31 @@ class ActivityTrackingControllerIntegrationTest {
         waterGoalRepository.deleteAll();
         foodEntryRepository.deleteAll();
         healthMetricRepository.deleteAll();
+        userAccountRepository.deleteAll();
+        householdRepository.deleteAll();
         userProfileRepository.deleteAll();
 
-        husbandId = userProfileRepository.save(createProfile("Husband", Gender.MALE)).getId();
-        wifeId = userProfileRepository.save(createProfile("Wife", Gender.FEMALE)).getId();
+        UserProfile husband = userProfileRepository.save(createProfile("Husband", Gender.MALE));
+        UserProfile wife = userProfileRepository.save(createProfile("Wife", Gender.FEMALE));
+        husbandId = husband.getId();
+        wifeId = wife.getId();
+        Household household = ControllerTestAuthentication.createHousehold(
+                householdRepository,
+                "Activity tracking test household");
+        UserAccount husbandAccount = ControllerTestAuthentication.createAccount(
+                userAccountRepository,
+                passwordEncoder,
+                household,
+                husband,
+                "activity.husband.controller@example.com");
+        UserAccount wifeAccount = ControllerTestAuthentication.createAccount(
+                userAccountRepository,
+                passwordEncoder,
+                household,
+                wife,
+                "activity.wife.controller@example.com");
+        mockMvc = ControllerTestAuthentication.authenticatedMockMvc(applicationContext, husbandAccount);
+        wifeMockMvc = ControllerTestAuthentication.authenticatedMockMvc(applicationContext, wifeAccount);
     }
 
     @Test
@@ -326,7 +366,7 @@ class ActivityTrackingControllerIntegrationTest {
     }
 
     @Test
-    void returnsNotFoundForMissingProfileAcrossEveryEndpoint() throws Exception {
+    void returnsForbiddenForAProfileOutsideTheAuthenticatedAccountAcrossEveryEndpoint() throws Exception {
         long missingUserId = 999_999L;
         long missingEntryId = 888_888L;
         LocalDate activityDate = LocalDate.now();
@@ -335,23 +375,23 @@ class ActivityTrackingControllerIntegrationTest {
 
         mockMvc.perform(post("/api/users/{userId}/activity-entries", missingUserId)
                         .contentType(MediaType.APPLICATION_JSON).content(request))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/users/{userId}/activity-entries", missingUserId)
                         .param("date", activityDate.toString()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/users/{userId}/activity-entries/{activityEntryId}",
                         missingUserId, missingEntryId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mockMvc.perform(put("/api/users/{userId}/activity-entries/{activityEntryId}",
                         missingUserId, missingEntryId)
                         .contentType(MediaType.APPLICATION_JSON).content(request))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mockMvc.perform(delete("/api/users/{userId}/activity-entries/{activityEntryId}",
                         missingUserId, missingEntryId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/users/{userId}/activity-summary", missingUserId)
                         .param("date", activityDate.toString()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -362,12 +402,12 @@ class ActivityTrackingControllerIntegrationTest {
                 activityDate, "YOGA", "Attempted update", 60, null, null, null, null);
 
         mockMvc.perform(get("/api/users/{userId}/activity-entries/{activityEntryId}", wifeId, husbandEntryId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mockMvc.perform(put("/api/users/{userId}/activity-entries/{activityEntryId}", wifeId, husbandEntryId)
                         .contentType(MediaType.APPLICATION_JSON).content(wifeUpdate))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mockMvc.perform(delete("/api/users/{userId}/activity-entries/{activityEntryId}", wifeId, husbandEntryId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/users/{userId}/activity-entries/{activityEntryId}", husbandId, husbandEntryId))
                 .andExpect(status().isOk())
@@ -385,7 +425,7 @@ class ActivityTrackingControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].activityName").value("Husband walk"));
-        mockMvc.perform(get("/api/users/{userId}/activity-entries", wifeId)
+        wifeMockMvc.perform(get("/api/users/{userId}/activity-entries", wifeId)
                         .param("date", activityDate.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
@@ -397,7 +437,7 @@ class ActivityTrackingControllerIntegrationTest {
                 .andExpect(jsonPath("$.totalDurationMinutes").value(30))
                 .andExpect(jsonPath("$.reportedSteps").value(3_000))
                 .andExpect(jsonPath("$.reportedDistanceKm").value(nullValue()));
-        mockMvc.perform(get("/api/users/{userId}/activity-summary", wifeId)
+        wifeMockMvc.perform(get("/api/users/{userId}/activity-summary", wifeId)
                         .param("date", activityDate.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userProfileId").value(wifeId))
@@ -418,7 +458,8 @@ class ActivityTrackingControllerIntegrationTest {
             Integer steps,
             BigDecimal distanceKm,
             Integer reportedCaloriesBurned) throws Exception {
-        String response = mockMvc.perform(post("/api/users/{userId}/activity-entries", userId)
+        MockMvc client = userId.equals(wifeId) ? wifeMockMvc : mockMvc;
+        String response = client.perform(post("/api/users/{userId}/activity-entries", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(activityRequest(
                                 activityDate,

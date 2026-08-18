@@ -3,9 +3,13 @@ package com.healthaitracker.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.healthaitracker.entity.Gender;
 import com.healthaitracker.entity.HealthMetric;
+import com.healthaitracker.entity.Household;
+import com.healthaitracker.entity.UserAccount;
 import com.healthaitracker.entity.UserProfile;
 import com.healthaitracker.repository.FoodEntryRepository;
 import com.healthaitracker.repository.HealthMetricRepository;
+import com.healthaitracker.repository.HouseholdRepository;
+import com.healthaitracker.repository.UserAccountRepository;
 import com.healthaitracker.repository.UserProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,7 +17,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -45,6 +51,18 @@ class FoodEntryControllerIntegrationTest {
     @Autowired
     private UserProfileRepository userProfileRepository;
 
+    @Autowired
+    private UserAccountRepository userAccountRepository;
+
+    @Autowired
+    private HouseholdRepository householdRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private WebApplicationContext applicationContext;
+
     private Long userProfileId;
     private Long otherUserProfileId;
 
@@ -52,10 +70,24 @@ class FoodEntryControllerIntegrationTest {
     void setUp() {
         foodEntryRepository.deleteAll();
         healthMetricRepository.deleteAll();
+        userAccountRepository.deleteAll();
+        householdRepository.deleteAll();
         userProfileRepository.deleteAll();
 
-        userProfileId = userProfileRepository.save(createProfile("Primary user", Gender.MALE, 90.0)).getId();
+        UserProfile primaryProfile = userProfileRepository.save(
+                createProfile("Primary user", Gender.MALE, 90.0));
+        userProfileId = primaryProfile.getId();
         otherUserProfileId = userProfileRepository.save(createProfile("Other user", Gender.FEMALE, 65.0)).getId();
+        Household household = ControllerTestAuthentication.createHousehold(
+                householdRepository,
+                "Food entry test household");
+        UserAccount account = ControllerTestAuthentication.createAccount(
+                userAccountRepository,
+                passwordEncoder,
+                household,
+                primaryProfile,
+                "food.entry.controller@example.com");
+        mockMvc = ControllerTestAuthentication.authenticatedMockMvc(applicationContext, account);
     }
 
     @Test
@@ -133,7 +165,7 @@ class FoodEntryControllerIntegrationTest {
     @Test
     void returnsNotFoundForMissingProfileAndMissingEntry() throws Exception {
         mockMvc.perform(get("/api/users/{userId}/food-entries", 999999L).param("date", LocalDate.now().toString()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/users/{userId}/food-entries/{foodEntryId}", userProfileId, 999999L))
                 .andExpect(status().isNotFound());
@@ -145,15 +177,15 @@ class FoodEntryControllerIntegrationTest {
         Long foodEntryId = createFoodEntry(userProfileId, entryDate, "DINNER", "Salmon", 500, 35, 30, 25);
 
         mockMvc.perform(get("/api/users/{userId}/food-entries/{foodEntryId}", otherUserProfileId, foodEntryId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(put("/api/users/{userId}/food-entries/{foodEntryId}", otherUserProfileId, foodEntryId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(foodEntryRequest(entryDate, "DINNER", "Changed salmon", 400, 30, 25, 20)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(delete("/api/users/{userId}/food-entries/{foodEntryId}", otherUserProfileId, foodEntryId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/users/{userId}/food-entries/{foodEntryId}", userProfileId, foodEntryId))
                 .andExpect(status().isOk())

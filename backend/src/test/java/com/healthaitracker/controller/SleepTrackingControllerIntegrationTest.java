@@ -3,11 +3,15 @@ package com.healthaitracker.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.healthaitracker.entity.Gender;
+import com.healthaitracker.entity.Household;
+import com.healthaitracker.entity.UserAccount;
 import com.healthaitracker.entity.UserProfile;
 import com.healthaitracker.repository.ActivityEntryRepository;
 import com.healthaitracker.repository.FoodEntryRepository;
 import com.healthaitracker.repository.HealthMetricRepository;
+import com.healthaitracker.repository.HouseholdRepository;
 import com.healthaitracker.repository.SleepEntryRepository;
+import com.healthaitracker.repository.UserAccountRepository;
 import com.healthaitracker.repository.UserProfileRepository;
 import com.healthaitracker.repository.WaterEntryRepository;
 import com.healthaitracker.repository.WaterGoalRepository;
@@ -18,8 +22,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
@@ -73,8 +79,21 @@ class SleepTrackingControllerIntegrationTest {
     @Autowired
     private UserProfileRepository userProfileRepository;
 
+    @Autowired
+    private UserAccountRepository userAccountRepository;
+
+    @Autowired
+    private HouseholdRepository householdRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private WebApplicationContext applicationContext;
+
     private Long husbandId;
     private Long wifeId;
+    private MockMvc wifeMockMvc;
 
     @BeforeEach
     void setUp() {
@@ -84,10 +103,31 @@ class SleepTrackingControllerIntegrationTest {
         waterGoalRepository.deleteAll();
         foodEntryRepository.deleteAll();
         healthMetricRepository.deleteAll();
+        userAccountRepository.deleteAll();
+        householdRepository.deleteAll();
         userProfileRepository.deleteAll();
 
-        husbandId = userProfileRepository.save(createProfile("Husband", Gender.MALE)).getId();
-        wifeId = userProfileRepository.save(createProfile("Wife", Gender.FEMALE)).getId();
+        UserProfile husband = userProfileRepository.save(createProfile("Husband", Gender.MALE));
+        UserProfile wife = userProfileRepository.save(createProfile("Wife", Gender.FEMALE));
+        husbandId = husband.getId();
+        wifeId = wife.getId();
+        Household household = ControllerTestAuthentication.createHousehold(
+                householdRepository,
+                "Sleep tracking test household");
+        UserAccount husbandAccount = ControllerTestAuthentication.createAccount(
+                userAccountRepository,
+                passwordEncoder,
+                household,
+                husband,
+                "sleep.husband.controller@example.com");
+        UserAccount wifeAccount = ControllerTestAuthentication.createAccount(
+                userAccountRepository,
+                passwordEncoder,
+                household,
+                wife,
+                "sleep.wife.controller@example.com");
+        mockMvc = ControllerTestAuthentication.authenticatedMockMvc(applicationContext, husbandAccount);
+        wifeMockMvc = ControllerTestAuthentication.authenticatedMockMvc(applicationContext, wifeAccount);
     }
 
     @Test
@@ -289,7 +329,7 @@ class SleepTrackingControllerIntegrationTest {
     }
 
     @Test
-    void returnsNotFoundForMissingProfilesAndEntries() throws Exception {
+    void rejectsOtherProfileRoutesAndReturnsNotFoundForMissingOwnedEntries() throws Exception {
         long missingUserId = 999_999L;
         long missingEntryId = 888_888L;
         LocalDate sleepDate = LocalDate.now().minusDays(1);
@@ -299,23 +339,23 @@ class SleepTrackingControllerIntegrationTest {
 
         mockMvc.perform(post("/api/users/{userId}/sleep-entries", missingUserId)
                         .contentType(MediaType.APPLICATION_JSON).content(request))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/users/{userId}/sleep-entries", missingUserId)
                         .param("date", sleepDate.toString()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/users/{userId}/sleep-entries/{sleepEntryId}",
                         missingUserId, missingEntryId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mockMvc.perform(put("/api/users/{userId}/sleep-entries/{sleepEntryId}",
                         missingUserId, missingEntryId)
                         .contentType(MediaType.APPLICATION_JSON).content(request))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mockMvc.perform(delete("/api/users/{userId}/sleep-entries/{sleepEntryId}",
                         missingUserId, missingEntryId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/users/{userId}/sleep-summary", missingUserId)
                         .param("date", sleepDate.toString()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/users/{userId}/sleep-entries/{sleepEntryId}", husbandId, missingEntryId))
                 .andExpect(status().isNotFound());
@@ -337,19 +377,19 @@ class SleepTrackingControllerIntegrationTest {
                 null);
 
         mockMvc.perform(get("/api/users/{userId}/sleep-entries/{sleepEntryId}", wifeId, husbandEntryId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mockMvc.perform(put("/api/users/{userId}/sleep-entries/{sleepEntryId}", wifeId, husbandEntryId)
                         .contentType(MediaType.APPLICATION_JSON).content(wifeUpdate))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mockMvc.perform(delete("/api/users/{userId}/sleep-entries/{sleepEntryId}", wifeId, husbandEntryId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/users/{userId}/sleep-entries", husbandId)
                         .param("date", sleepDate.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].sleepType").value("NIGHT_SLEEP"));
-        mockMvc.perform(get("/api/users/{userId}/sleep-entries", wifeId)
+        wifeMockMvc.perform(get("/api/users/{userId}/sleep-entries", wifeId)
                         .param("date", sleepDate.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
@@ -361,7 +401,7 @@ class SleepTrackingControllerIntegrationTest {
                 .andExpect(jsonPath("$.totalSleepMinutes").value(480))
                 .andExpect(jsonPath("$.nightSleepMinutes").value(480))
                 .andExpect(jsonPath("$.napMinutes").value(0));
-        mockMvc.perform(get("/api/users/{userId}/sleep-summary", wifeId)
+        wifeMockMvc.perform(get("/api/users/{userId}/sleep-summary", wifeId)
                         .param("date", sleepDate.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userProfileId").value(wifeId))
@@ -380,7 +420,8 @@ class SleepTrackingControllerIntegrationTest {
             LocalDateTime endDateTime,
             long durationMinutes,
             Integer qualityRating) throws Exception {
-        String response = mockMvc.perform(post("/api/users/{userId}/sleep-entries", userId)
+        MockMvc client = userId.equals(wifeId) ? wifeMockMvc : mockMvc;
+        String response = client.perform(post("/api/users/{userId}/sleep-entries", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(sleepRequest(
                                 sleepDate,

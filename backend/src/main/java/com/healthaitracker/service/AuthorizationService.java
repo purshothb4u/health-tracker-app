@@ -29,7 +29,11 @@ public class AuthorizationService {
     }
 
     public Long currentProfileId() {
-        return currentPrincipal().getProfileId();
+        return currentAccount().getUserProfile().getId();
+    }
+
+    public Long currentAccountId() {
+        return currentPrincipal().getAccountId();
     }
 
     public void requireSelf(Long requestedProfileId) {
@@ -39,11 +43,13 @@ public class AuthorizationService {
     }
 
     public void requireChallengeCreationParticipants(List<Long> participantProfileIds) {
-        AuthenticatedAccountPrincipal principal = currentPrincipal();
-        if (!participantProfileIds.contains(principal.getProfileId())) {
+        UserAccount currentAccount = currentAccount();
+        Long currentProfileId = currentAccount.getUserProfile().getId();
+        Long currentHouseholdId = currentAccount.getHousehold().getId();
+        if (!participantProfileIds.contains(currentProfileId)) {
             throw new AccessDeniedException(ACCESS_DENIED_MESSAGE);
         }
-        if (!allProfilesBelongToHousehold(participantProfileIds, principal.getHouseholdId())) {
+        if (!allProfilesBelongToHousehold(participantProfileIds, currentHouseholdId)) {
             throw new AccessDeniedException(ACCESS_DENIED_MESSAGE);
         }
     }
@@ -55,28 +61,30 @@ public class AuthorizationService {
     }
 
     public boolean canAccessChallenge(List<CoupleChallengeParticipant> participants) {
-        AuthenticatedAccountPrincipal principal = currentPrincipal();
+        UserAccount currentAccount = currentAccount();
+        Long currentProfileId = currentAccount.getUserProfile().getId();
+        Long currentHouseholdId = currentAccount.getHousehold().getId();
         List<Long> participantProfileIds = participants.stream()
                 .map(CoupleChallengeParticipant::getUserProfile)
                 .map(UserProfile::getId)
                 .toList();
-        return participantProfileIds.contains(principal.getProfileId())
+        return participantProfileIds.contains(currentProfileId)
                 && allProfilesBelongToHousehold(
                         participantProfileIds,
-                        principal.getHouseholdId());
+                        currentHouseholdId);
     }
 
     public void requireProfileInCurrentHousehold(Long profileId) {
-        AuthenticatedAccountPrincipal principal = currentPrincipal();
+        Long currentHouseholdId = currentAccount().getHousehold().getId();
         UserAccount account = userAccountRepository.findByUserProfileId(profileId)
                 .orElseThrow(() -> new AccessDeniedException(ACCESS_DENIED_MESSAGE));
-        if (!Objects.equals(account.getHousehold().getId(), principal.getHouseholdId())) {
+        if (!Objects.equals(account.getHousehold().getId(), currentHouseholdId)) {
             throw new AccessDeniedException(ACCESS_DENIED_MESSAGE);
         }
     }
 
     public List<EligibleCoupleParticipantResponse> getEligibleCoupleParticipants() {
-        Long householdId = currentPrincipal().getHouseholdId();
+        Long householdId = currentAccount().getHousehold().getId();
         return userAccountRepository.findByHouseholdIdOrderByUserProfileIdAsc(householdId).stream()
                 .map(UserAccount::getUserProfile)
                 .map(profile -> new EligibleCoupleParticipantResponse(
@@ -106,6 +114,13 @@ public class AuthorizationService {
             throw new AuthenticationCredentialsNotFoundException("Authentication is required");
         }
         return principal;
+    }
+
+    private UserAccount currentAccount() {
+        return userAccountRepository
+                .findWithHouseholdAndProfileById(currentPrincipal().getAccountId())
+                .orElseThrow(() -> new AuthenticationCredentialsNotFoundException(
+                        "Authentication is required"));
     }
 
     private String resolvedDisplayName(UserProfile profile) {

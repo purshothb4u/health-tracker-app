@@ -1,11 +1,14 @@
 import CoupleChallengesPanel from '../components/CoupleChallengesPanel'
 import GoalsPanel from '../components/GoalsPanel'
+import PartnerLinkingPanel from '../components/PartnerLinkingPanel'
 import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
 import { StatusBadge, type StatusBadgeTone } from '../components/ui/StatusBadge'
 import { useSelectedProfile } from '../context/SelectedProfileContext'
+import { usePartnerLinking } from '../hooks/usePartnerLinking'
+import { classNames } from '../utils/classNames'
 
 function profileTone(profileName: string): StatusBadgeTone {
   if (profileName === 'Husband') return 'profile-husband'
@@ -14,6 +17,7 @@ function profileTone(profileName: string): StatusBadgeTone {
 }
 
 export default function GoalsPage() {
+  const partnerLinking = usePartnerLinking()
   const {
     profiles,
     selectedProfile,
@@ -65,14 +69,26 @@ export default function GoalsPage() {
       ) : null}
 
       {!error && selectedProfile ? (
-        <div className="grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] xl:items-start">
-          <GoalsPanel
-            key={selectedProfile.id}
-            profileName={selectedProfile.displayName}
-            userProfileId={selectedProfile.id}
-          />
-          <CoupleChallengesPanel />
-        </div>
+        <>
+          <PartnerLinkingPanel state={partnerLinking} />
+          <div className={classNames(
+            'grid min-w-0 gap-8 xl:items-start',
+            partnerLinking.linked
+              ? 'xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]'
+              : 'xl:grid-cols-1',
+          )}>
+            <GoalsPanel
+              key={selectedProfile.id}
+              profileName={selectedProfile.displayName}
+              userProfileId={selectedProfile.id}
+            />
+            {partnerLinking.linked ? (
+              <CoupleChallengesPanel
+                eligibleParticipants={partnerLinking.eligibleParticipants}
+              />
+            ) : null}
+          </div>
+        </>
       ) : null}
     </div>
   )

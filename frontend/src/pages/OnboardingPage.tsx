@@ -276,7 +276,7 @@ export default function OnboardingPage() {
                 {profile.profileComplete ? 'Update your profile' : `Welcome, ${identity?.displayName ?? 'there'}`}
               </h2>
               <p className="mt-1.5 text-supporting text-app-secondary">
-                Required details are used for your personal health calculations. Nutrition targets are not calculated yet.
+                Required details are used for your personal health calculations and personalized daily targets.
               </p>
 
               <form

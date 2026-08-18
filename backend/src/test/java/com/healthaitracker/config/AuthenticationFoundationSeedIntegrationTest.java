@@ -27,7 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
@@ -69,7 +68,7 @@ class AuthenticationFoundationSeedIntegrationTest {
     private CommandLineRunner seedUserProfiles;
 
     @Test
-    void seedsSharedHouseholdOwnershipSecurelyAndIdempotentlyWithoutProtectingApis() throws Exception {
+    void seedsSharedHouseholdOwnershipSecurelyAndIdempotentlyWhileBusinessApisRemainProtected() throws Exception {
         UserAccount husbandAccount = userAccountRepository.findByEmail("purush@healthaitracker.test")
                 .orElseThrow();
         UserAccount wifeAccount = userAccountRepository.findByEmail("kasturi@healthaitracker.test")
@@ -125,8 +124,7 @@ class AuthenticationFoundationSeedIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("application/json"));
         mockMvc.perform(get("/api/users"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].displayName").exists())
-                .andExpect(jsonPath("$[1].displayName").exists());
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith("application/json"));
     }
 }

@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { useCoupleChallenges } from '../hooks/useCoupleChallenges'
-import type { ChallengeStatus, CoupleChallenge, CoupleChallengeRequest } from '../types/CoupleChallenge'
+import type {
+  ChallengeStatus,
+  CoupleChallenge,
+  CoupleChallengeRequest,
+  EligibleCoupleParticipant,
+} from '../types/CoupleChallenge'
 import { CHALLENGE_STATUS_LABELS } from '../types/CoupleChallenge'
 import AchievementBadge from './AchievementBadge'
 import CoupleChallengeCard from './CoupleChallengeCard'
@@ -28,8 +33,12 @@ function messageFrom(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
 }
 
-export default function CoupleChallengesPanel() {
-  const challengeState = useCoupleChallenges()
+interface CoupleChallengesPanelProps {
+  eligibleParticipants: readonly EligibleCoupleParticipant[]
+}
+
+export default function CoupleChallengesPanel({ eligibleParticipants }: CoupleChallengesPanelProps) {
+  const challengeState = useCoupleChallenges(eligibleParticipants)
   const [showForm, setShowForm] = useState(false)
   const [editingChallenge, setEditingChallenge] = useState<CoupleChallenge | null>(null)
   const [pendingDeleteChallenge, setPendingDeleteChallenge] = useState<Pick<CoupleChallenge, 'id' | 'title'> | null>(null)
@@ -163,7 +172,7 @@ export default function CoupleChallengesPanel() {
             <span className="break-words">Shared couple challenges</span>
           </span>
         )}
-        description="Shared progress for Husband and Wife, independent of the active personal-goal profile."
+        description="Shared progress for both linked household profiles."
         actions={(
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge tone="profile-shared">Shared by both profiles</StatusBadge>

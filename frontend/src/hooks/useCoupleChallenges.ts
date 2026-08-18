@@ -70,7 +70,9 @@ function participantKey(ids: readonly number[]): string {
   return ids.join(':')
 }
 
-export function useCoupleChallenges(): UseCoupleChallengesResult {
+export function useCoupleChallenges(
+  eligibleParticipantsOverride?: readonly EligibleCoupleParticipant[],
+): UseCoupleChallengesResult {
   const [statusFilter, setStatusFilterState] = useState<ChallengeStatus | null>(null)
   const [challenges, setChallenges] = useState<CoupleChallenge[]>([])
   const [progressByChallengeId, setProgressByChallengeId] =
@@ -111,7 +113,10 @@ export function useCoupleChallenges(): UseCoupleChallengesResult {
   useEffect(() => {
     const currentRequest = ++requestSequence.current
 
-    const contextKey = statusFilter ?? 'ALL'
+    const overrideParticipantKey = eligibleParticipantsOverride === undefined
+      ? 'FETCH'
+      : participantKey(eligibleParticipantsOverride.map((participant) => participant.profileId))
+    const contextKey = `${statusFilter ?? 'ALL'}:${overrideParticipantKey}`
     const isBackgroundRefresh = loadedContext.current === contextKey
     if (isBackgroundRefresh) {
       setRefreshing(true)
@@ -129,7 +134,9 @@ export function useCoupleChallenges(): UseCoupleChallengesResult {
     async function loadChallenges() {
       try {
         const [participantData, challengeData] = await Promise.all([
-          fetchEligibleCoupleParticipants(),
+          eligibleParticipantsOverride === undefined
+            ? fetchEligibleCoupleParticipants()
+            : Promise.resolve([...eligibleParticipantsOverride]),
           fetchCoupleChallenges(selectedStatus),
         ])
         const participantIds = participantData.map((participant) => participant.profileId)
@@ -169,7 +176,7 @@ export function useCoupleChallenges(): UseCoupleChallengesResult {
     return () => {
       cancelled = true
     }
-  }, [reloadToken, statusFilter])
+  }, [eligibleParticipantsOverride, reloadToken, statusFilter])
 
   const beginMutation = useCallback((): string => {
     const participantUserProfileIds = eligibleParticipants.map(

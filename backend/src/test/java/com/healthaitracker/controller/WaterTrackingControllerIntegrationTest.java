@@ -2,9 +2,13 @@ package com.healthaitracker.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.healthaitracker.entity.Gender;
+import com.healthaitracker.entity.Household;
+import com.healthaitracker.entity.UserAccount;
 import com.healthaitracker.entity.UserProfile;
 import com.healthaitracker.repository.FoodEntryRepository;
 import com.healthaitracker.repository.HealthMetricRepository;
+import com.healthaitracker.repository.HouseholdRepository;
+import com.healthaitracker.repository.UserAccountRepository;
 import com.healthaitracker.repository.UserProfileRepository;
 import com.healthaitracker.repository.WaterEntryRepository;
 import com.healthaitracker.repository.WaterGoalRepository;
@@ -14,8 +18,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.time.LocalDate;
 import java.util.Map;
@@ -54,8 +60,21 @@ class WaterTrackingControllerIntegrationTest {
     @Autowired
     private UserProfileRepository userProfileRepository;
 
+    @Autowired
+    private UserAccountRepository userAccountRepository;
+
+    @Autowired
+    private HouseholdRepository householdRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private WebApplicationContext applicationContext;
+
     private Long husbandId;
     private Long wifeId;
+    private MockMvc wifeMockMvc;
 
     @BeforeEach
     void setUp() {
@@ -63,10 +82,31 @@ class WaterTrackingControllerIntegrationTest {
         waterGoalRepository.deleteAll();
         foodEntryRepository.deleteAll();
         healthMetricRepository.deleteAll();
+        userAccountRepository.deleteAll();
+        householdRepository.deleteAll();
         userProfileRepository.deleteAll();
 
-        husbandId = userProfileRepository.save(createProfile("Husband", Gender.MALE)).getId();
-        wifeId = userProfileRepository.save(createProfile("Wife", Gender.FEMALE)).getId();
+        UserProfile husband = userProfileRepository.save(createProfile("Husband", Gender.MALE));
+        UserProfile wife = userProfileRepository.save(createProfile("Wife", Gender.FEMALE));
+        husbandId = husband.getId();
+        wifeId = wife.getId();
+        Household household = ControllerTestAuthentication.createHousehold(
+                householdRepository,
+                "Water tracking test household");
+        UserAccount husbandAccount = ControllerTestAuthentication.createAccount(
+                userAccountRepository,
+                passwordEncoder,
+                household,
+                husband,
+                "water.husband.controller@example.com");
+        UserAccount wifeAccount = ControllerTestAuthentication.createAccount(
+                userAccountRepository,
+                passwordEncoder,
+                household,
+                wife,
+                "water.wife.controller@example.com");
+        mockMvc = ControllerTestAuthentication.authenticatedMockMvc(applicationContext, husbandAccount);
+        wifeMockMvc = ControllerTestAuthentication.authenticatedMockMvc(applicationContext, wifeAccount);
     }
 
     @Test
@@ -191,7 +231,7 @@ class WaterTrackingControllerIntegrationTest {
                 .andExpect(jsonPath("$.goalReached").value(false));
 
         createWaterEntry(wifeId, emptyDate, 500, "No goal configured");
-        mockMvc.perform(get("/api/users/{userId}/hydration-summary", wifeId).param("date", emptyDate.toString()))
+        wifeMockMvc.perform(get("/api/users/{userId}/hydration-summary", wifeId).param("date", emptyDate.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalConsumedMl").value(500))
                 .andExpect(jsonPath("$.entryCount").value(1))
@@ -255,21 +295,21 @@ class WaterTrackingControllerIntegrationTest {
         Long husbandEntryId = createWaterEntry(husbandId, entryDate, 400, "Husband water");
 
         mockMvc.perform(get("/api/users/{userId}/water-goal", 999999L))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/users/{userId}/water-entries/{waterEntryId}", husbandId, 999999L))
                 .andExpect(status().isNotFound());
 
         mockMvc.perform(get("/api/users/{userId}/water-entries/{waterEntryId}", wifeId, husbandEntryId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(put("/api/users/{userId}/water-entries/{waterEntryId}", wifeId, husbandEntryId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(waterEntryRequest(entryDate, 900, "Attempted change")))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(delete("/api/users/{userId}/water-entries/{waterEntryId}", wifeId, husbandEntryId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/users/{userId}/water-entries/{waterEntryId}", husbandId, husbandEntryId))
                 .andExpect(status().isOk())
@@ -289,14 +329,15 @@ class WaterTrackingControllerIntegrationTest {
                 .andExpect(jsonPath("$.totalConsumedMl").value(300))
                 .andExpect(jsonPath("$.currentDailyGoalMl").value(2000));
 
-        mockMvc.perform(get("/api/users/{userId}/hydration-summary", wifeId).param("date", entryDate.toString()))
+        wifeMockMvc.perform(get("/api/users/{userId}/hydration-summary", wifeId).param("date", entryDate.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalConsumedMl").value(700))
                 .andExpect(jsonPath("$.currentDailyGoalMl").value(1500));
     }
 
     private Long createWaterEntry(Long userId, LocalDate entryDate, int amountMl, String notes) throws Exception {
-        String response = mockMvc.perform(post("/api/users/{userId}/water-entries", userId)
+        MockMvc client = userId.equals(wifeId) ? wifeMockMvc : mockMvc;
+        String response = client.perform(post("/api/users/{userId}/water-entries", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(waterEntryRequest(entryDate, amountMl, notes)))
                 .andExpect(status().isCreated())
@@ -307,7 +348,8 @@ class WaterTrackingControllerIntegrationTest {
     }
 
     private void setWaterGoal(Long userId, int dailyGoalMl) throws Exception {
-        mockMvc.perform(put("/api/users/{userId}/water-goal", userId)
+        MockMvc client = userId.equals(wifeId) ? wifeMockMvc : mockMvc;
+        client.perform(put("/api/users/{userId}/water-goal", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(waterGoalRequest(dailyGoalMl)))
                 .andExpect(status().isOk());
