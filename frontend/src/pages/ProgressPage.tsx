@@ -18,12 +18,9 @@ export default function ProgressPage() {
     <div className="min-w-0 space-y-rhythm-lg">
       <header className="flex min-w-0 flex-col gap-4 border-b border-app-border-muted pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <p className="text-label uppercase tracking-[0.14em] text-primary-700">Trends and insights</p>
-          <h1 className="mt-2 break-words text-page-title text-app-primary">Progress</h1>
+          <h1 className="break-words text-page-title text-app-primary">Progress</h1>
           <p className="mt-2 max-w-3xl break-words text-supporting text-app-secondary sm:text-base">
-            {selectedProfile
-              ? `Explore selected-range weight and nutrition patterns for ${selectedProfile.displayName}.`
-              : 'Explore selected-range weight and nutrition patterns.'}
+            Weight and nutrition trends over time.
           </p>
         </div>
       </header>

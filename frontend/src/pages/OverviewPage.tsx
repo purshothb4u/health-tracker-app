@@ -65,7 +65,7 @@ export default function OverviewPage() {
 
   return (
     <div className="min-w-0 space-y-rhythm-lg">
-      <header className="flex min-w-0 flex-col gap-5 border-b border-app-border-muted pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex min-w-0 flex-col gap-4 border-b border-app-border-muted pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="text-label uppercase tracking-[0.14em] text-primary-700">My health</p>
           <h1 className="mt-2 break-words text-page-title text-app-primary">
@@ -88,16 +88,23 @@ export default function OverviewPage() {
             </div>
             <Button
               variant="quiet"
+              size="compact"
               onClick={reloadOverview}
               disabled={overview.initialLoading || overview.refreshing}
               aria-label={overview.initialLoading
                 ? 'Loading overview'
-                : overview.refreshing ? 'Refreshing overview' : 'Reload overview'}
+                : overview.refreshing ? 'Refreshing overview' : 'Refresh overview'}
+              title={overview.initialLoading
+                ? 'Loading overview'
+                : overview.refreshing ? 'Refreshing overview' : 'Refresh overview'}
+              className="h-11 w-11 shrink-0 !px-0 !py-0"
             >
-              <OverviewIcon name="refresh" className="h-4 w-4" />
-              {overview.initialLoading
-                ? 'Loading...'
-                : overview.refreshing ? 'Refreshing...' : 'Reload'}
+              <OverviewIcon
+                name="refresh"
+                className={overview.initialLoading || overview.refreshing
+                  ? 'h-4 w-4 animate-spin motion-reduce:animate-none'
+                  : 'h-4 w-4'}
+              />
             </Button>
           </div>
         ) : null}
@@ -130,15 +137,9 @@ export default function OverviewPage() {
 
       {!profilesError && selectedProfile ? (
         <div className="min-w-0 space-y-rhythm-lg">
-          <div
-            className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-metadata text-app-secondary"
-            role="status"
-            aria-live="polite"
-          >
-            <span>{refreshStatus}</span>
-            {overview.refreshing ? (
-              <span className="font-semibold text-primary-700">Refreshing in the background...</span>
-            ) : null}
+          <div className="sr-only" role="status" aria-live="polite">
+            {refreshStatus}
+            {overview.refreshing ? ' Refreshing in the background.' : ''}
           </div>
 
           <OverviewStatusCards

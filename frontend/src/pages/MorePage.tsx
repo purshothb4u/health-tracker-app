@@ -44,10 +44,9 @@ export default function MorePage() {
   return (
     <div className="min-w-0 space-y-rhythm-lg">
       <header className="min-w-0 border-b border-app-border-muted pb-6">
-        <p className="text-label uppercase tracking-[0.14em] text-primary-700">More destinations</p>
-        <h1 className="mt-2 break-words text-page-title text-app-primary">More</h1>
+        <h1 className="break-words text-page-title text-app-primary">More</h1>
         <p className="mt-2 max-w-3xl break-words text-supporting text-app-secondary sm:text-base">
-          Open goals, progress analytics, and partner or household settings.
+          Goals, progress and partner settings.
         </p>
       </header>
 
