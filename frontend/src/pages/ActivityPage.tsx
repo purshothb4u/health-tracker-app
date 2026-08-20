@@ -4,14 +4,7 @@ import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
-import { StatusBadge, type StatusBadgeTone } from '../components/ui/StatusBadge'
 import { useSelectedProfile } from '../context/SelectedProfileContext'
-
-function profileTone(profileName: string): StatusBadgeTone {
-  if (profileName === 'Husband') return 'profile-husband'
-  if (profileName === 'Wife') return 'profile-wife'
-  return 'information'
-}
 
 export default function ActivityPage() {
   const {
@@ -32,11 +25,6 @@ export default function ActivityPage() {
             Record daily movement and sleep with clear, profile-specific summaries.
           </p>
         </div>
-        {selectedProfile ? (
-          <StatusBadge tone={profileTone(selectedProfile.name)}>
-            Selected profile: {selectedProfile.displayName}
-          </StatusBadge>
-        ) : null}
       </header>
 
       {loading && selectedProfile === null ? (

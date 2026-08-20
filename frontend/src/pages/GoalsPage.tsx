@@ -7,16 +7,9 @@ import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
-import { StatusBadge, type StatusBadgeTone } from '../components/ui/StatusBadge'
 import { useSelectedProfile } from '../context/SelectedProfileContext'
 import { usePartnerLinking } from '../hooks/usePartnerLinking'
 import { classNames } from '../utils/classNames'
-
-function profileTone(profileName: string): StatusBadgeTone {
-  if (profileName === 'Husband') return 'profile-husband'
-  if (profileName === 'Wife') return 'profile-wife'
-  return 'information'
-}
 
 export default function GoalsPage() {
   const location = useLocation()
@@ -50,11 +43,6 @@ export default function GoalsPage() {
             Build personal momentum and support one another through shared challenges.
           </p>
         </div>
-        {selectedProfile ? (
-          <StatusBadge tone={profileTone(selectedProfile.name)}>
-            Personal goals: {selectedProfile.displayName}
-          </StatusBadge>
-        ) : null}
       </header>
 
       {loading && selectedProfile === null ? (

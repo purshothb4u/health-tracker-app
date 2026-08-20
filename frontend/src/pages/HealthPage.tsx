@@ -3,19 +3,8 @@ import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
-import { StatusBadge, type StatusBadgeTone } from '../components/ui/StatusBadge'
 import { useSelectedProfile } from '../context/SelectedProfileContext'
 import { useDailyTargetsInvalidation } from '../context/DailyTargetsContext'
-
-function profileTone(profileName: string): StatusBadgeTone {
-  if (profileName === 'Husband') return 'profile-husband'
-  if (profileName === 'Wife') return 'profile-wife'
-  return 'information'
-}
-
-function formatGender(gender: string): string {
-  return gender.charAt(0) + gender.slice(1).toLowerCase()
-}
 
 export default function HealthPage() {
   const refreshDailyTargets = useDailyTargetsInvalidation()
@@ -42,12 +31,6 @@ export default function HealthPage() {
             Record weight and review goal progress with backend-calculated health metrics.
           </p>
         </div>
-        {selectedProfile ? (
-          <StatusBadge tone={profileTone(selectedProfile.name)}>
-            Selected profile: {selectedProfile.displayName} · {formatGender(selectedProfile.gender)} ·{' '}
-            {selectedProfile.age} years
-          </StatusBadge>
-        ) : null}
       </header>
 
       {loading && selectedProfile === null ? (

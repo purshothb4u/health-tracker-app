@@ -4,15 +4,8 @@ import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
-import { StatusBadge, type StatusBadgeTone } from '../components/ui/StatusBadge'
 import { useSelectedProfile } from '../context/SelectedProfileContext'
 import { useDailyTargets } from '../hooks/useDailyTargets'
-
-function profileTone(profileName: string): StatusBadgeTone {
-  if (profileName === 'Husband') return 'profile-husband'
-  if (profileName === 'Wife') return 'profile-wife'
-  return 'information'
-}
 
 export default function NutritionPage() {
   const {
@@ -34,11 +27,6 @@ export default function NutritionPage() {
             Record food and hydration with clear daily summaries and complete history.
           </p>
         </div>
-        {selectedProfile ? (
-          <StatusBadge tone={profileTone(selectedProfile.name)}>
-            Selected profile: {selectedProfile.displayName}
-          </StatusBadge>
-        ) : null}
       </header>
 
       {loading && selectedProfile === null ? (
