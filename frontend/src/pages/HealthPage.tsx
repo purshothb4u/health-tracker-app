@@ -27,7 +27,7 @@ export default function HealthPage() {
         <div className="min-w-0">
           <h1 className="break-words text-page-title text-app-primary">Health</h1>
           <p className="mt-2 max-w-3xl break-words text-supporting text-app-secondary sm:text-base">
-            Weight, health metrics and history.
+            Track and review your weight.
           </p>
         </div>
       </header>

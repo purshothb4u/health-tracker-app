@@ -107,7 +107,7 @@ export default function HealthMetricForm({
         <SectionHeader
           className="min-w-0 flex-1"
           headingId={headingId}
-          headingLevel={3}
+          headingLevel={2}
           title="Today's weight"
           description={todayMetric
             ? "A weight entry already exists for today. Saving will update that entry."

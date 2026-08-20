@@ -1,11 +1,8 @@
-import { useId } from 'react'
 import HealthMetricForm from './HealthMetricForm'
 import HealthMetricHistory from './HealthMetricHistory'
-import HealthSummaryCard from './HealthSummaryCard'
 import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
 import { LoadingState } from './ui/LoadingState'
-import { SectionHeader } from './ui/SectionHeader'
 import { useHealthMetrics } from '../hooks/useHealthMetrics'
 import type { UserProfile } from '../types/UserProfile'
 
@@ -16,7 +13,6 @@ interface HealthMetricsPanelProps {
 
 export default function HealthMetricsPanel({ profile, onMetricSaved }: HealthMetricsPanelProps) {
   const { metrics, summary, loading, error, reload } = useHealthMetrics(profile.id)
-  const headingId = useId()
   const hasLoadedData = summary !== null || metrics.length > 0
   const initialLoading = loading && !hasLoadedData
 
@@ -26,24 +22,17 @@ export default function HealthMetricsPanel({ profile, onMetricSaved }: HealthMet
   }
 
   return (
-    <section aria-labelledby={headingId} className="min-w-0 space-y-rhythm-lg">
-      <SectionHeader
-        headingId={headingId}
-        headingLevel={2}
-        title="Weight and health metrics"
-        description={`Record today's weight and review calculated health information for ${profile.displayName}.`}
-      />
-
-      {initialLoading ? <LoadingState message="Loading health metrics..." /> : null}
+    <div className="min-w-0 space-y-rhythm-lg">
+      {initialLoading ? <LoadingState message="Loading weight data..." /> : null}
 
       {!initialLoading && loading ? (
-        <LoadingState compact message="Refreshing health metrics..." />
+        <LoadingState compact message="Refreshing weight data..." />
       ) : null}
 
       {error ? (
         <Alert
           tone="error"
-          title="Unable to load health metrics"
+          title="Unable to load weight data"
           action={(
             <Button variant="secondary" size="compact" onClick={reload}>
               Retry
@@ -56,17 +45,14 @@ export default function HealthMetricsPanel({ profile, onMetricSaved }: HealthMet
 
       {hasLoadedData ? (
         <>
-          {summary ? <HealthSummaryCard profile={profile} summary={summary} /> : null}
-          <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(19rem,0.78fr)_minmax(0,1.45fr)] xl:items-start">
-            <HealthMetricForm
-              userProfileId={profile.id}
-              metrics={metrics}
-              onSaved={handleMetricSaved}
-            />
-            <HealthMetricHistory metrics={metrics} />
-          </div>
+          <HealthMetricForm
+            userProfileId={profile.id}
+            metrics={metrics}
+            onSaved={handleMetricSaved}
+          />
+          <HealthMetricHistory metrics={metrics} />
         </>
       ) : null}
-    </section>
+    </div>
   )
 }

@@ -23,7 +23,7 @@ export default function HealthMetricHistory({ metrics }: HealthMetricHistoryProp
         <SectionHeader
           className="min-w-0 flex-1"
           headingId={headingId}
-          headingLevel={3}
+          headingLevel={2}
           title="Weight history"
           description="Recorded weights are shown newest first."
         />
