@@ -71,10 +71,15 @@ class FlywaySchemaIntegrationTest {
                 .filter(migration -> "3".equals(migration.getVersion().getVersion()))
                 .findFirst()
                 .orElseThrow();
+        MigrationInfo versionFour = Arrays.stream(flyway.info().applied())
+                .filter(migration -> "4".equals(migration.getVersion().getVersion()))
+                .findFirst()
+                .orElseThrow();
 
         assertEquals(MigrationState.SUCCESS, versionOne.getState());
         assertEquals(MigrationState.SUCCESS, versionTwo.getState());
         assertEquals(MigrationState.SUCCESS, versionThree.getState());
+        assertEquals(MigrationState.SUCCESS, versionFour.getState());
         assertEquals(
                 1,
                 jdbcTemplate.queryForObject(
@@ -82,6 +87,18 @@ class FlywaySchemaIntegrationTest {
                         SELECT COUNT(*)
                         FROM INFORMATION_SCHEMA.TABLES
                         WHERE UPPER(TABLE_NAME) = 'FLYWAY_SCHEMA_HISTORY'
+                        """,
+                        Integer.class));
+        assertEquals(
+                2,
+                jdbcTemplate.queryForObject(
+                        """
+                        SELECT COUNT(*)
+                        FROM INFORMATION_SCHEMA.TABLES
+                        WHERE UPPER(TABLE_NAME) IN (
+                            'SPRING_SESSION',
+                            'SPRING_SESSION_ATTRIBUTES'
+                        )
                         """,
                         Integer.class));
         assertNotNull(householdRepository);

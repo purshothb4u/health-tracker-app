@@ -6,6 +6,7 @@ import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Field } from '../components/ui/Field'
+import { PasswordInput } from '../components/ui/PasswordInput'
 
 interface LoginErrors {
   email?: string
@@ -142,9 +143,8 @@ export default function LoginPage({ destination }: LoginPageProps) {
 
             <Field label="Password" required error={errors.password}>
               {(controlProps) => (
-                <input
+                <PasswordInput
                   {...controlProps}
-                  type="password"
                   autoComplete="current-password"
                   value={password}
                   disabled={submitting}

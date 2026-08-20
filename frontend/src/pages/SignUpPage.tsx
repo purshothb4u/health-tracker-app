@@ -5,6 +5,7 @@ import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Field } from '../components/ui/Field'
+import { PasswordInput } from '../components/ui/PasswordInput'
 import { useAuth } from '../context/AuthContext'
 
 interface SignUpErrors {
@@ -159,9 +160,8 @@ export default function SignUpPage() {
               hint={`${MINIMUM_PASSWORD_LENGTH} to ${MAXIMUM_PASSWORD_LENGTH} characters.`}
             >
               {(controlProps) => (
-                <input
+                <PasswordInput
                   {...controlProps}
-                  type="password"
                   autoComplete="new-password"
                   minLength={MINIMUM_PASSWORD_LENGTH}
                   maxLength={MAXIMUM_PASSWORD_LENGTH}
@@ -182,9 +182,8 @@ export default function SignUpPage() {
 
             <Field label="Confirm password" required error={errors.confirmPassword}>
               {(controlProps) => (
-                <input
+                <PasswordInput
                   {...controlProps}
-                  type="password"
                   autoComplete="new-password"
                   value={confirmPassword}
                   disabled={submitting}
