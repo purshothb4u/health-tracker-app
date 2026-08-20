@@ -84,9 +84,6 @@ export default function NutritionPage() {
           />
           <div className="min-w-0 border-t border-app-border-muted pt-10">
             <WaterTrackingPanel
-              dailyTargets={dailyTargets.data}
-              dailyTargetsLoading={dailyTargets.loading}
-              profileName={selectedProfile.displayName}
               userProfileId={selectedProfile.id}
             />
           </div>
