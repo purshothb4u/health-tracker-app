@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { useLocation } from 'react-router'
 import CoupleChallengesPanel from '../components/CoupleChallengesPanel'
 import GoalsPanel from '../components/GoalsPanel'
 import PartnerLinkingPanel from '../components/PartnerLinkingPanel'
@@ -17,6 +19,7 @@ function profileTone(profileName: string): StatusBadgeTone {
 }
 
 export default function GoalsPage() {
+  const location = useLocation()
   const partnerLinking = usePartnerLinking()
   const {
     profiles,
@@ -25,6 +28,17 @@ export default function GoalsPage() {
     error,
     reloadProfiles,
   } = useSelectedProfile()
+
+  useEffect(() => {
+    if (location.hash !== '#partner-household' || selectedProfile === null) {
+      return
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      document.getElementById('partner-household')?.scrollIntoView({ block: 'start' })
+    })
+    return () => window.cancelAnimationFrame(animationFrame)
+  }, [location.hash, selectedProfile])
 
   return (
     <div className="min-w-0 space-y-rhythm-lg">

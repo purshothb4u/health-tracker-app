@@ -1,5 +1,5 @@
-import { useEffect, useId, useRef, useState, type FocusEvent } from 'react'
-import { matchPath, NavLink, useLocation } from 'react-router'
+import { Link, matchPath, NavLink, useLocation } from 'react-router'
+import { preloadRoute } from '../../app/routeModules'
 import { classNames } from '../../utils/classNames'
 
 type NavigationIconName =
@@ -34,6 +34,14 @@ const navigationItems: readonly NavigationItem[] = [
 
 const mobilePrimaryItems = navigationItems.filter((item) => item.mobilePlacement === 'primary')
 const mobileMoreItems = navigationItems.filter((item) => item.mobilePlacement === 'more')
+
+function preloadHandlers(pathname: string) {
+  return {
+    onFocus: () => preloadRoute(pathname),
+    onPointerEnter: () => preloadRoute(pathname),
+    onPointerDown: () => preloadRoute(pathname),
+  }
+}
 
 function NavigationIcon({ name, className = 'h-5 w-5' }: {
   name: NavigationIconName
@@ -116,72 +124,11 @@ function mobileItemClasses(active: boolean): string {
 export default function PrimaryNavigation({ layout }: PrimaryNavigationProps) {
   const mobile = layout === 'mobile'
   const location = useLocation()
-  const [moreOpen, setMoreOpen] = useState(false)
-  const moreMenuId = useId()
-  const moreRootRef = useRef<HTMLDivElement>(null)
-  const moreButtonRef = useRef<HTMLButtonElement>(null)
-  const moreActive = mobileMoreItems.some((item) => (
-    matchPath({ path: item.to, end: true }, location.pathname) !== null
-  ))
-
-  useEffect(() => {
-    setMoreOpen(false)
-  }, [location.pathname, location.search])
-
-  useEffect(() => {
-    if (!mobile) {
-      return
-    }
-
-    const desktopQuery = window.matchMedia('(min-width: 1024px)')
-    function handleBreakpointChange(event: MediaQueryListEvent) {
-      if (event.matches) {
-        setMoreOpen(false)
-      }
-    }
-
-    desktopQuery.addEventListener('change', handleBreakpointChange)
-    return () => desktopQuery.removeEventListener('change', handleBreakpointChange)
-  }, [mobile])
-
-  useEffect(() => {
-    if (!mobile || !moreOpen) {
-      return
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target
-      if (target instanceof Node && !moreRootRef.current?.contains(target)) {
-        setMoreOpen(false)
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key !== 'Escape') {
-        return
-      }
-
-      event.preventDefault()
-      setMoreOpen(false)
-      moreButtonRef.current?.focus()
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
-
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [mobile, moreOpen])
-
-  function handleMoreBlur(event: FocusEvent<HTMLDivElement>) {
-    const nextTarget = event.relatedTarget
-    if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) {
-      return
-    }
-    setMoreOpen(false)
-  }
+  const morePageActive = matchPath({ path: '/more', end: true }, location.pathname) !== null
+  const moreChildActive = mobileMoreItems.some((item) => (
+      matchPath({ path: item.to, end: true }, location.pathname) !== null
+    ))
+  const moreActive = morePageActive || moreChildActive
 
   if (!mobile) {
     return (
@@ -192,6 +139,7 @@ export default function PrimaryNavigation({ layout }: PrimaryNavigationProps) {
               key={item.to}
               to={{ pathname: item.to, search: location.search }}
               end={item.end}
+              {...preloadHandlers(item.to)}
               className={({ isActive }) => classNames(
                 'group flex min-h-11 items-center gap-3 rounded-control px-2.5 py-2 text-label',
                 'transition-[background-color,color,box-shadow] duration-150 motion-reduce:transition-none',
@@ -236,6 +184,7 @@ export default function PrimaryNavigation({ layout }: PrimaryNavigationProps) {
             key={item.to}
             to={{ pathname: item.to, search: location.search }}
             end={item.end}
+            {...preloadHandlers(item.to)}
             className={({ isActive }) => mobileItemClasses(isActive)}
           >
             <NavigationIcon name={item.icon} />
@@ -243,57 +192,16 @@ export default function PrimaryNavigation({ layout }: PrimaryNavigationProps) {
           </NavLink>
         ))}
 
-        <div ref={moreRootRef} className="relative min-w-0" onBlur={handleMoreBlur}>
-          <button
-            ref={moreButtonRef}
-            type="button"
-            aria-controls={moreMenuId}
-            aria-expanded={moreOpen}
-            onClick={() => setMoreOpen((current) => !current)}
-            className={classNames(mobileItemClasses(moreActive), 'w-full')}
-          >
-            <NavigationIcon name="more" />
-            <span className="truncate">More</span>
-            {moreActive ? <span className="sr-only">, current section</span> : null}
-          </button>
-
-          {moreOpen ? (
-            <div
-              id={moreMenuId}
-              role="group"
-              aria-label="More destinations"
-              className="absolute bottom-[calc(100%+0.625rem)] right-0 w-48 max-w-[calc(100vw-1rem)] rounded-card border border-app-border-muted bg-app-surface-elevated p-2 shadow-elevated"
-            >
-              <p className="px-2 pb-1.5 pt-1 text-metadata font-semibold uppercase tracking-[0.12em] text-app-muted">
-                More destinations
-              </p>
-              <div className="space-y-1">
-                {mobileMoreItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={{ pathname: item.to, search: location.search }}
-                    onClick={() => setMoreOpen(false)}
-                    className={({ isActive }) => classNames(
-                      'flex min-h-11 items-center gap-2.5 rounded-control px-2.5 py-2 text-label',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
-                      isActive
-                        ? 'bg-primary-50 text-primary-700'
-                        : 'text-app-secondary hover:bg-app-border-muted/60 hover:text-app-primary',
-                    )}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-app-border-muted"
-                    >
-                      <NavigationIcon className="h-4 w-4" name={item.icon} />
-                    </span>
-                    <span>{item.label}</span>
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
+        <Link
+          to={{ pathname: '/more', search: location.search }}
+          aria-current={morePageActive ? 'page' : moreChildActive ? 'location' : undefined}
+          {...preloadHandlers('/more')}
+          className={mobileItemClasses(moreActive)}
+        >
+          <NavigationIcon name="more" />
+          <span className="truncate">More</span>
+          {moreActive ? <span className="sr-only">, current section</span> : null}
+        </Link>
       </div>
     </nav>
   )

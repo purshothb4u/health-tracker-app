@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { Outlet } from 'react-router'
+import { scheduleIdleRoutePreloads } from '../../app/routeModules'
 import AuthenticatedAccountControls from './AuthenticatedAccountControls'
 import PrimaryNavigation from './PrimaryNavigation'
 
@@ -43,6 +45,8 @@ function ApplicationIdentity({ compact = false }: { compact?: boolean }) {
 }
 
 export default function AppLayout() {
+  useEffect(() => scheduleIdleRoutePreloads(), [])
+
   return (
     <div className="min-h-screen overflow-x-clip bg-app-background lg:flex">
       <a

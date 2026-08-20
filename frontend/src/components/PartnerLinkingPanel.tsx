@@ -83,10 +83,11 @@ export default function PartnerLinkingPanel({ state }: PartnerLinkingPanelProps)
 
   return (
     <Card
+      id="partner-household"
       as="section"
       padding="normal"
       elevated
-      className="min-w-0 space-y-5 border-profile-shared/30 bg-profile-shared-surface/25"
+      className="min-w-0 scroll-mt-24 space-y-5 border-profile-shared/30 bg-profile-shared-surface/25"
       aria-labelledby="partner-linking-heading"
       aria-busy={state.loading || state.refreshing || state.mutating}
     >

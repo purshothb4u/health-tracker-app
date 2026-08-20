@@ -36,7 +36,8 @@ class SpaForwardControllerIntegrationTest {
             "/nutrition",
             "/activity",
             "/goals",
-            "/progress"
+            "/progress",
+            "/more"
     })
     void forwardsOnlyKnownReactRoutesToThePackagedIndex(String route) throws Exception {
         mockMvc.perform(get(route))

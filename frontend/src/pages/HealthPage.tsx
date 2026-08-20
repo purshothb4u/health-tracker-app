@@ -5,6 +5,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
 import { StatusBadge, type StatusBadgeTone } from '../components/ui/StatusBadge'
 import { useSelectedProfile } from '../context/SelectedProfileContext'
+import { useDailyTargetsInvalidation } from '../context/DailyTargetsContext'
 
 function profileTone(profileName: string): StatusBadgeTone {
   if (profileName === 'Husband') return 'profile-husband'
@@ -17,6 +18,7 @@ function formatGender(gender: string): string {
 }
 
 export default function HealthPage() {
+  const refreshDailyTargets = useDailyTargetsInvalidation()
   const {
     profiles,
     selectedProfile,
@@ -24,6 +26,11 @@ export default function HealthPage() {
     error,
     reloadProfiles,
   } = useSelectedProfile()
+
+  function handleMetricSaved() {
+    reloadProfiles()
+    refreshDailyTargets()
+  }
 
   return (
     <div className="min-w-0 space-y-rhythm-lg">
@@ -70,7 +77,7 @@ export default function HealthPage() {
 
       {!error && selectedProfile ? (
         <div key={selectedProfile.id} className="min-w-0">
-          <HealthMetricsPanel profile={selectedProfile} onMetricSaved={reloadProfiles} />
+          <HealthMetricsPanel profile={selectedProfile} onMetricSaved={handleMetricSaved} />
         </div>
       ) : null}
     </div>

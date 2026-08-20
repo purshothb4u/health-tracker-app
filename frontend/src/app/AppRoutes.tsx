@@ -5,17 +5,27 @@ import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { LoadingState } from '../components/ui/LoadingState'
 import { useAuth } from '../context/AuthContext'
+import { DailyTargetsProvider } from '../context/DailyTargetsContext'
 import { SelectedProfileProvider } from '../context/SelectedProfileContext'
 import LoginPage from '../pages/LoginPage'
 import OnboardingPage from '../pages/OnboardingPage'
 import OverviewPage from '../pages/OverviewPage'
 import SignUpPage from '../pages/SignUpPage'
+import {
+  loadActivityPage,
+  loadGoalsPage,
+  loadHealthPage,
+  loadMorePage,
+  loadNutritionPage,
+  loadProgressPage,
+} from './routeModules'
 
-const HealthPage = lazy(() => import('../pages/HealthPage'))
-const NutritionPage = lazy(() => import('../pages/NutritionPage'))
-const ActivityPage = lazy(() => import('../pages/ActivityPage'))
-const GoalsPage = lazy(() => import('../pages/GoalsPage'))
-const ProgressPage = lazy(() => import('../pages/ProgressPage'))
+const HealthPage = lazy(loadHealthPage)
+const NutritionPage = lazy(loadNutritionPage)
+const ActivityPage = lazy(loadActivityPage)
+const GoalsPage = lazy(loadGoalsPage)
+const ProgressPage = lazy(loadProgressPage)
+const MorePage = lazy(loadMorePage)
 
 interface RedirectLocationState {
   from?: {
@@ -105,7 +115,13 @@ function RequireCompletedProfile() {
   if (!identity?.profileComplete) {
     return <Navigate replace to="/onboarding" />
   }
-  return <SelectedProfileProvider><AppLayout /></SelectedProfileProvider>
+  return (
+    <SelectedProfileProvider>
+      <DailyTargetsProvider key={identity.profileId}>
+        <AppLayout />
+      </DailyTargetsProvider>
+    </SelectedProfileProvider>
+  )
 }
 
 export default function AppRoutes() {
@@ -153,6 +169,14 @@ export default function AppRoutes() {
           element={(
             <Suspense fallback={<LoadingState message="Loading Progress page..." />}>
               <ProgressPage />
+            </Suspense>
+          )}
+        />
+        <Route
+          path="more"
+          element={(
+            <Suspense fallback={<LoadingState message="Loading More page..." />}>
+              <MorePage />
             </Suspense>
           )}
         />

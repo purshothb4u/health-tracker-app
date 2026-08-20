@@ -140,15 +140,19 @@ export function useCoupleChallenges(
           fetchCoupleChallenges(selectedStatus),
         ])
         const participantIds = participantData.map((participant) => participant.profileId)
-        const achievementPairs = validParticipantIds(participantIds)
-          ? await Promise.all(participantIds.map(async (userProfileId) => [
+        const achievementPairsPromise = validParticipantIds(participantIds)
+          ? Promise.all(participantIds.map(async (userProfileId) => [
             userProfileId,
             await fetchCoupleAchievements(userProfileId),
           ] as const))
-          : []
-        const progressData = await Promise.all(
+          : Promise.resolve([])
+        const progressDataPromise = Promise.all(
           challengeData.map((challenge) => fetchCoupleChallengeProgress(challenge.id)),
         )
+        const [achievementPairs, progressData] = await Promise.all([
+          achievementPairsPromise,
+          progressDataPromise,
+        ])
         if (!cancelled && currentRequest === requestSequence.current) {
           setEligibleParticipants(participantData)
           setChallenges(challengeData)

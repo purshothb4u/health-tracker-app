@@ -15,7 +15,8 @@ public class SpaForwardController {
             "/nutrition",
             "/activity",
             "/goals",
-            "/progress"
+            "/progress",
+            "/more"
     })
     public String forwardKnownReactRoute() {
         return "forward:/index.html";
