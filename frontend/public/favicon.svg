@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="HealthAITracker">
+  <rect width="512" height="512" rx="112" fill="#3E7759"/>
+  <path
+    d="M397 142c-54-52-140-13-141 49-1-62-87-101-141-49-53 51-32 126 18 174l123 119 123-119c50-48 71-123 18-174Z"
+    fill="none"
+    stroke="#FFFDF9"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="34"
+  />
+</svg>
