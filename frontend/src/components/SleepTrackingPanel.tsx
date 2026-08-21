@@ -58,7 +58,15 @@ export default function SleepTrackingPanel({
     setPendingDeleteEntryId(null)
     setActionError(null)
     setActionSuccess(null)
-  }, [selectedDate, userProfileId])
+  }, [userProfileId])
+
+  function handleSelectedDateChange(date: string) {
+    setEditingEntry(null)
+    setPendingDeleteEntryId(null)
+    setActionError(null)
+    setActionSuccess(null)
+    setSelectedDate(date)
+  }
 
   function beginAction() {
     setActionError(null)
@@ -68,6 +76,9 @@ export default function SleepTrackingPanel({
   async function handleCreate(data: SleepEntryRequest): Promise<SleepEntry> {
     beginAction()
     const entry = await createEntry(data)
+    if (entry.sleepDate !== selectedDate) {
+      setSelectedDate(entry.sleepDate)
+    }
     setActionSuccess('Sleep entry added successfully.')
     return entry
   }
@@ -78,6 +89,9 @@ export default function SleepTrackingPanel({
   ): Promise<SleepEntry> {
     beginAction()
     const entry = await updateEntry(sleepEntryId, data)
+    if (entry.sleepDate !== selectedDate) {
+      setSelectedDate(entry.sleepDate)
+    }
     setActionSuccess('Sleep entry updated successfully.')
     return entry
   }
@@ -137,7 +151,7 @@ export default function SleepTrackingPanel({
                 max={getTodayLocalDate()}
                 type="date"
                 value={selectedDate}
-                onChange={(event) => setSelectedDate(event.target.value)}
+                onChange={(event) => handleSelectedDateChange(event.target.value)}
               />
             )}
           </Field>
@@ -177,7 +191,6 @@ export default function SleepTrackingPanel({
             <SleepEntryForm
               editingEntry={editingEntry}
               mutating={mutating}
-              selectedDate={selectedDate}
               onActionStart={beginAction}
               onCancelEdit={() => setEditingEntry(null)}
               onCreate={handleCreate}

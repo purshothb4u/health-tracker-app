@@ -18,8 +18,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,6 +36,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class SleepTrackingServiceTest {
 
+    private static final ZoneId APPLICATION_ZONE = ZoneId.of("Asia/Singapore");
+
     @Mock
     private SleepEntryRepository sleepEntryRepository;
 
@@ -40,12 +45,15 @@ class SleepTrackingServiceTest {
     private UserProfileRepository userProfileRepository;
 
     private SleepTrackingService sleepTrackingService;
+    private Clock applicationClock;
 
     @BeforeEach
     void setUp() {
+        applicationClock = Clock.system(APPLICATION_ZONE);
         sleepTrackingService = new SleepTrackingService(
                 sleepEntryRepository,
-                userProfileRepository);
+                userProfileRepository,
+                applicationClock);
     }
 
     @Test
@@ -213,7 +221,7 @@ class SleepTrackingServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Sleep date is required");
         assertThatThrownBy(() -> sleepTrackingService.getDailySleepSummary(
-                1L, LocalDate.now().plusDays(1)))
+                1L, LocalDate.now(applicationClock).plusDays(1)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Sleep date must not be in the future");
     }
@@ -227,7 +235,7 @@ class SleepTrackingServiceTest {
         assertInvalid(request(null, SleepType.NIGHT_SLEEP, valid.startDateTime(), valid.endDateTime(),
                         null, null),
                 "Sleep date is required");
-        assertInvalid(request(LocalDate.now().plusDays(1), SleepType.NIGHT_SLEEP,
+        assertInvalid(request(LocalDate.now(applicationClock).plusDays(1), SleepType.NIGHT_SLEEP,
                         valid.startDateTime(), valid.endDateTime(), null, null),
                 "Sleep date must not be in the future");
         assertInvalid(request(valid.sleepDate(), null, valid.startDateTime(), valid.endDateTime(),
@@ -254,13 +262,54 @@ class SleepTrackingServiceTest {
                         end, end, null, null),
                 "End date and time must be after start date and time");
 
-        LocalDateTime futureEnd = LocalDateTime.now().plusMinutes(10);
+        LocalDateTime futureEnd = LocalDateTime.now(applicationClock).plusMinutes(10);
         assertInvalid(request(futureEnd.toLocalDate(), SleepType.NIGHT_SLEEP,
                         futureEnd.minusMinutes(30), futureEnd, null, null),
                 "End date and time must not be in the future");
         assertInvalid(request(end.toLocalDate().minusDays(1), SleepType.NIGHT_SLEEP,
                         end.minusMinutes(30), end, null, null),
                 "Sleep date must match the end date");
+    }
+
+    @Test
+    void comparesWakeTimeUsingConfiguredApplicationClock() {
+        Clock singaporeMorning = Clock.fixed(
+                Instant.parse("2026-08-21T01:30:00Z"),
+                APPLICATION_ZONE);
+        SleepTrackingService configuredService = new SleepTrackingService(
+                sleepEntryRepository,
+                userProfileRepository,
+                singaporeMorning);
+        UserProfile profile = createProfile(1L, "Husband");
+        LocalDateTime wakeTimeEarlierThatMorning = LocalDateTime.of(2026, 8, 21, 9, 0);
+        when(userProfileRepository.findById(1L)).thenReturn(Optional.of(profile));
+        when(sleepEntryRepository.save(any(SleepEntry.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0, SleepEntry.class));
+
+        SleepEntryResponse accepted = configuredService.createSleepEntry(
+                1L,
+                request(
+                        wakeTimeEarlierThatMorning.toLocalDate(),
+                        SleepType.NIGHT_SLEEP,
+                        wakeTimeEarlierThatMorning.minusHours(8),
+                        wakeTimeEarlierThatMorning,
+                        4,
+                        null));
+
+        assertThat(accepted.durationMinutes()).isEqualTo(480L);
+
+        LocalDateTime genuinelyFutureWakeTime = LocalDateTime.of(2026, 8, 21, 9, 31);
+        assertThatThrownBy(() -> configuredService.createSleepEntry(
+                1L,
+                request(
+                        genuinelyFutureWakeTime.toLocalDate(),
+                        SleepType.NAP,
+                        genuinelyFutureWakeTime.minusMinutes(30),
+                        genuinelyFutureWakeTime,
+                        3,
+                        null)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("End date and time must not be in the future");
     }
 
     @Test
@@ -411,7 +460,7 @@ class SleepTrackingServiceTest {
     }
 
     private LocalDateTime pastEndDateTime() {
-        return LocalDate.now().minusDays(1).atTime(6, 30);
+        return LocalDate.now(applicationClock).minusDays(1).atTime(6, 30);
     }
 
     private UserProfile createProfile(Long id, String name) {

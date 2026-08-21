@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -32,12 +33,15 @@ public class SleepTrackingService {
 
     private final SleepEntryRepository sleepEntryRepository;
     private final UserProfileRepository userProfileRepository;
+    private final Clock applicationClock;
 
     public SleepTrackingService(
             SleepEntryRepository sleepEntryRepository,
-            UserProfileRepository userProfileRepository) {
+            UserProfileRepository userProfileRepository,
+            Clock applicationClock) {
         this.sleepEntryRepository = sleepEntryRepository;
         this.userProfileRepository = userProfileRepository;
+        this.applicationClock = applicationClock;
     }
 
     @Transactional
@@ -159,7 +163,7 @@ public class SleepTrackingService {
         if (!request.endDateTime().isAfter(request.startDateTime())) {
             throw new IllegalArgumentException("End date and time must be after start date and time");
         }
-        if (request.endDateTime().isAfter(LocalDateTime.now())) {
+        if (request.endDateTime().isAfter(LocalDateTime.now(applicationClock))) {
             throw new IllegalArgumentException("End date and time must not be in the future");
         }
         if (!request.sleepDate().equals(request.endDateTime().toLocalDate())) {
@@ -184,7 +188,7 @@ public class SleepTrackingService {
         if (sleepDate == null) {
             throw new IllegalArgumentException("Sleep date is required");
         }
-        if (sleepDate.isAfter(LocalDate.now())) {
+        if (sleepDate.isAfter(LocalDate.now(applicationClock))) {
             throw new IllegalArgumentException("Sleep date must not be in the future");
         }
     }

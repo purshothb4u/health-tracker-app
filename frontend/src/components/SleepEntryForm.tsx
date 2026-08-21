@@ -5,7 +5,6 @@ import {
   type SleepEntryRequest,
   type SleepType,
 } from '../types/SleepTracking'
-import { formatLocalDate as formatDisplayDate } from '../utils/dateFormatting'
 import TrackingIcon from './TrackingIcon'
 import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
@@ -16,7 +15,6 @@ import { SectionHeader } from './ui/SectionHeader'
 import { StatusBadge } from './ui/StatusBadge'
 
 interface SleepEntryFormProps {
-  selectedDate: string
   editingEntry: SleepEntry | null
   mutating: boolean
   onCreate: (data: SleepEntryRequest) => Promise<SleepEntry>
@@ -26,6 +24,7 @@ interface SleepEntryFormProps {
 }
 
 const sleepTypes = Object.keys(SLEEP_TYPE_LABELS) as SleepType[]
+const qualityRatings = [1, 2, 3, 4, 5] as const
 const wholeQualityPattern = /^[1-5]$/
 const controlClassName = 'min-h-11 w-full min-w-0 max-w-full rounded-control border border-app-border bg-app-surface px-3 py-2 text-app-primary shadow-sm focus-visible:border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:bg-app-border-muted disabled:opacity-70'
 
@@ -78,12 +77,28 @@ function parseLocalDateTime(value: string): Date | null {
     : null
 }
 
+function calculateDurationMinutes(startValue: string, endValue: string): number | null {
+  const startDateTime = parseLocalDateTime(startValue)
+  const endDateTime = parseLocalDateTime(endValue)
+  if (startDateTime === null || endDateTime === null || endDateTime <= startDateTime) {
+    return null
+  }
+  return Math.floor((endDateTime.getTime() - startDateTime.getTime()) / 60_000)
+}
+
+function formatDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+  if (hours === 0) return `${remainingMinutes} min`
+  if (remainingMinutes === 0) return `${hours} hr`
+  return `${hours} hr ${remainingMinutes} min`
+}
+
 function getErrorMessage(error: unknown, fallbackMessage: string): string {
   return error instanceof Error ? error.message : fallbackMessage
 }
 
 export default function SleepEntryForm({
-  selectedDate,
   editingEntry,
   mutating,
   onCreate,
@@ -94,6 +109,10 @@ export default function SleepEntryForm({
   const [formValues, setFormValues] = useState(emptyFormValues)
   const [error, setError] = useState<string | null>(null)
   const isEditing = editingEntry !== null
+  const durationPreviewMinutes = calculateDurationMinutes(
+    formValues.startDateTime,
+    formValues.endDateTime,
+  )
 
   useEffect(() => {
     setFormValues(
@@ -109,7 +128,7 @@ export default function SleepEntryForm({
         : emptyFormValues(),
     )
     setError(null)
-  }, [editingEntry, selectedDate])
+  }, [editingEntry])
 
   function updateField(field: keyof typeof formValues, value: string) {
     setFormValues((current) => ({ ...current, [field]: value }))
@@ -150,10 +169,6 @@ export default function SleepEntryForm({
       setError('End date and time must not be in the future.')
       return
     }
-    if (formatLocalDate(endDateTime) !== selectedDate) {
-      setError('Sleep date must match the end date.')
-      return
-    }
 
     const durationMinutes = (endDateTime.getTime() - startDateTime.getTime()) / 60_000
     if (durationMinutes < 1) {
@@ -176,7 +191,7 @@ export default function SleepEntryForm({
     }
 
     const data: SleepEntryRequest = {
-      sleepDate: selectedDate,
+      sleepDate: formatLocalDate(endDateTime),
       sleepType: formValues.sleepType,
       startDateTime: formValues.startDateTime,
       endDateTime: formValues.endDateTime,
@@ -215,7 +230,7 @@ export default function SleepEntryForm({
             headingId="sleep-entry-form-heading"
             headingLevel={3}
             title={isEditing ? 'Edit sleep entry' : 'Add sleep entry'}
-            description={`${isEditing ? 'Update' : 'Record'} a session ending on ${formatDisplayDate(selectedDate)}.`}
+            description={isEditing ? 'Update this sleep session.' : 'Record a sleep session.'}
             actions={(
               <StatusBadge tone={isEditing ? 'information' : 'sleep'}>
                 {isEditing ? 'Editing session' : 'New session'}
@@ -224,12 +239,7 @@ export default function SleepEntryForm({
           />
         </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <Field label="Selected sleep date" hint="This must match the end date below.">
-            {(controlProps) => (
-              <input {...controlProps} className={`${controlClassName} bg-app-border-muted/60 text-app-secondary`} readOnly type="text" value={formatDisplayDate(selectedDate)} />
-            )}
-          </Field>
+        <div className="mt-5">
           <Field label="Sleep type" required>
             {(controlProps) => (
               <select {...controlProps} className={controlClassName} disabled={mutating} value={formValues.sleepType} onChange={(event) => updateField('sleepType', event.target.value)}>
@@ -242,30 +252,56 @@ export default function SleepEntryForm({
           </Field>
         </div>
 
-        <fieldset className="mt-5 min-w-0 rounded-control border border-metric-sleep/25 bg-metric-sleep-surface/30 p-4">
-          <legend className="px-1 text-label text-app-primary">Session timing</legend>
-          <p className="mb-4 break-words text-metadata text-app-secondary">
-            Cross-midnight sleep may start on the previous date. The end date must match the selected sleep date.
+        <div className="mt-5 grid min-w-0 gap-4 sm:grid-cols-2">
+          <Field label="Went to bed" required>
+            {(controlProps) => (
+              <input {...controlProps} className={controlClassName} disabled={mutating} max={formatLocalDateTimeInput(new Date())} type="datetime-local" value={formValues.startDateTime} onChange={(event) => updateField('startDateTime', event.target.value)} />
+            )}
+          </Field>
+          <Field label="Woke up" required>
+            {(controlProps) => (
+              <input {...controlProps} className={controlClassName} disabled={mutating} max={formatLocalDateTimeInput(new Date())} type="datetime-local" value={formValues.endDateTime} onChange={(event) => updateField('endDateTime', event.target.value)} />
+            )}
+          </Field>
+        </div>
+
+        <div className="mt-4 rounded-control border border-metric-sleep/25 bg-metric-sleep-surface/30 px-4 py-3" role="status" aria-live="polite">
+          <p className="text-metadata font-medium text-app-secondary">Calculated duration</p>
+          <p className="mt-1 text-lg font-bold tabular-nums text-app-primary">
+            {durationPreviewMinutes === null ? 'Enter bedtime and wake-up time' : formatDuration(durationPreviewMinutes)}
           </p>
-          <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-            <Field label="Start date and time" required hint="A cross-midnight session may start on the previous date.">
-              {(controlProps) => (
-                <input {...controlProps} className={controlClassName} disabled={mutating} max={formatLocalDateTimeInput(new Date())} type="datetime-local" value={formValues.startDateTime} onChange={(event) => updateField('startDateTime', event.target.value)} />
-              )}
-            </Field>
-            <Field label="End date and time" required hint="The end date determines the selected sleep date.">
-              {(controlProps) => (
-                <input {...controlProps} className={controlClassName} disabled={mutating} max={formatLocalDateTimeInput(new Date())} type="datetime-local" value={formValues.endDateTime} onChange={(event) => updateField('endDateTime', event.target.value)} />
-              )}
-            </Field>
+        </div>
+
+        <fieldset className="mt-4 min-w-0">
+          <legend className="text-label text-app-primary">
+            Quality rating <span className="font-normal text-app-secondary">(optional)</span>
+          </legend>
+          <p id="sleep-quality-hint" className="sr-only">
+            Choose a rating from 1 to 5. Select the current rating again to clear it.
+          </p>
+          <div className="mt-2 grid max-w-md grid-cols-5 gap-2" aria-describedby="sleep-quality-hint">
+            {qualityRatings.map((rating) => {
+              const selected = formValues.qualityRating === String(rating)
+              return (
+                <button
+                  key={rating}
+                  type="button"
+                  aria-label={selected
+                    ? `Clear sleep quality rating ${rating} out of 5`
+                    : `Rate sleep quality ${rating} out of 5`}
+                  aria-pressed={selected}
+                  disabled={mutating}
+                  onClick={() => updateField('qualityRating', selected ? '' : String(rating))}
+                  className={selected
+                    ? 'min-h-11 min-w-11 rounded-control border border-metric-sleep bg-metric-sleep text-sm font-bold text-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-55'
+                    : 'min-h-11 min-w-11 rounded-control border border-app-border bg-app-surface text-sm font-bold text-app-primary shadow-sm hover:border-metric-sleep hover:bg-metric-sleep-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-55'}
+                >
+                  {rating}
+                </button>
+              )
+            })}
           </div>
         </fieldset>
-
-        <Field className="mt-4 sm:max-w-[calc(50%-0.5rem)]" label="Quality rating" optional hint="Enter a whole number from 1 to 5, or leave blank.">
-          {(controlProps) => (
-            <input {...controlProps} className={controlClassName} disabled={mutating} inputMode="numeric" placeholder="1 to 5" type="text" value={formValues.qualityRating} onChange={(event) => updateField('qualityRating', event.target.value)} />
-          )}
-        </Field>
 
         <Field className="mt-4" label="Notes" optional hint="Up to 500 characters.">
           {(controlProps) => (

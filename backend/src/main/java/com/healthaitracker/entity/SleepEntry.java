@@ -16,7 +16,6 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
@@ -36,7 +35,6 @@ public class SleepEntry {
     private UserProfile userProfile;
 
     @NotNull
-    @PastOrPresent
     @Column(name = "sleep_date", nullable = false)
     private LocalDate sleepDate;
 

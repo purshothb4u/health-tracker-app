@@ -28,6 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.sql.Timestamp;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -57,6 +58,9 @@ class SleepTrackingControllerIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private Clock applicationClock;
 
     @Autowired
     private SleepEntryRepository sleepEntryRepository;
@@ -281,10 +285,10 @@ class SleepTrackingControllerIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Invalid value for parameter: date"));
         mockMvc.perform(get("/api/users/{userId}/sleep-entries", husbandId)
-                        .param("date", LocalDate.now().plusDays(1).toString()))
+                        .param("date", LocalDate.now(applicationClock).plusDays(1).toString()))
                 .andExpect(status().isBadRequest());
         mockMvc.perform(get("/api/users/{userId}/sleep-summary", husbandId)
-                        .param("date", LocalDate.now().plusDays(1).toString()))
+                        .param("date", LocalDate.now(applicationClock).plusDays(1).toString()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -292,10 +296,10 @@ class SleepTrackingControllerIntegrationTest {
     void rejectsInvalidSleepRequestPayloads() throws Exception {
         LocalDate sleepDate = LocalDate.now().minusDays(1);
         LocalDateTime end = sleepDate.atTime(6, 30);
-        LocalDateTime futureEnd = LocalDateTime.now().plusMinutes(10);
+        LocalDateTime futureEnd = LocalDateTime.now(applicationClock).plusMinutes(10);
         List<String> invalidPayloads = List.of(
                 "{}",
-                sleepRequest(LocalDate.now().plusDays(1), "NIGHT_SLEEP",
+                sleepRequest(LocalDate.now(applicationClock).plusDays(1), "NIGHT_SLEEP",
                         end.minusHours(8), end, null, null),
                 sleepRequest(sleepDate, null, end.minusHours(8), end, null, null),
                 sleepRequest(sleepDate, "UNKNOWN", end.minusHours(8), end, null, null),
